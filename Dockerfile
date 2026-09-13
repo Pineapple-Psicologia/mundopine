@@ -9,6 +9,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
+# Build (Vite + Nitro) em VPS com pouca RAM sobrando fica no limite do heap
+# padrao do V8 e derruba o processo (OOM); com o swap do host isso vira mais
+# lento em vez de travar, mas ainda assim damos um teto explicito ao heap.
+ENV NODE_OPTIONS=--max-old-space-size=3072
 RUN npm run build
 
 FROM node:22-alpine AS runner
