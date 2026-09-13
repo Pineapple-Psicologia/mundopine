@@ -75,11 +75,13 @@ export const Route = createFileRoute("/api/public/lentes-sfx")({
           return new Response("Invalid lens", { status: 400 });
         }
 
-        // Confiamos apenas em cf-connecting-ip (definido pelo edge de
-        // Cloudflare e não pode ser forjado por clientes que passam pela
-        // borda). x-forwarded-for é livremente forjável e foi removido
-        // para impedir bypass do rate limit por rotação de IP falso.
-        const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+        // Sem borda Cloudflare aqui: o IP real vem do x-forwarded-for que o
+        // proxy reverso (Traefik, no EasyPanel) define. Pegamos o primeiro
+        // IP da lista. Isso é só uma proteção informal contra abuso —
+        // diferente do cf-connecting-ip da Cloudflare, x-forwarded-for pode
+        // em tese ser forjado se o proxy não sobrescrever o header recebido.
+        const forwardedFor = request.headers.get("x-forwarded-for");
+        const ip = forwardedFor?.split(",")[0]?.trim() || "unknown";
 
 
         if (rateLimited(ip)) {

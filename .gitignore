@@ -16,6 +16,9 @@ dist-ssr
 .nitro
 *.local
 
+# Env vars (self-host: use EasyPanel's env var UI instead)
+.env
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

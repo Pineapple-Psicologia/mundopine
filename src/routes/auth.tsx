@@ -35,7 +35,7 @@ const signInSchema = z.object({
 });
 
 function AuthPage() {
-  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [showSignInPwd, setShowSignInPwd] = useState(false);
@@ -86,15 +86,6 @@ function AuthPage() {
     setBusy(false);
     if (error) toast.error(error);
     else toast.success("Conta criada! Verifique seu email para confirmar o cadastro.");
-  };
-
-  const onGoogle = async () => {
-    setBusy(true);
-    const { error } = await signInWithGoogle();
-    if (error) {
-      toast.error(error);
-      setBusy(false);
-    }
   };
 
   return (
@@ -216,17 +207,6 @@ function AuthPage() {
             </form>
           </TabsContent>
         </Tabs>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">ou</span>
-          </div>
-        </div>
-
-        <Button type="button" variant="outline" className="w-full" onClick={onGoogle} disabled={busy}>
-          Continuar com Google
-        </Button>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
           <Link to="/" className="underline">Voltar ao início</Link>
