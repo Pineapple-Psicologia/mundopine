@@ -19,6 +19,11 @@ dist-ssr
 # Env vars (self-host: use EasyPanel's env var UI instead)
 .env
 
+# Sensitive DB backup/export used to migrate real data — never commit this
+.migration-export/
+*.backup
+*.dump
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
