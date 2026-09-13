@@ -202,10 +202,16 @@ export default function MinhaCasa({ room }: Props) {
   const remoteCameraRef = useRef<CasaCamera | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // sync realtime — evita ping-pong: quando o estado chega do peer, NÃO rebroadcast.
+  // sync realtime — evita ping-pong: quando o estado chega do peer (ou de um
+  // moveShared local), NÃO arma um novo timer de broadcast pra essa mudança.
   const remoteRef = useRef(false);
   const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingStateRef = useRef<State | null>(null);
+  // Espelha sempre o `state` mais atual (atualizado a cada render, sem depender
+  // de quem originou a mudança) — assim, quando o timer de debounce disparar,
+  // ele nunca manda uma foto antiga que sobrescreveria uma posição já correta
+  // no peer (ver PLANO: causa raiz 2 — item "volta" pra posição errada).
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     return room.on?.((m) => {
@@ -233,17 +239,13 @@ export default function MinhaCasa({ room }: Props) {
   useEffect(() => {
     if (!room.ready) return;
     if (remoteRef.current) {
-      remoteRef.current = false;
+      remoteRef.current = false; // consumida; não arma novo timer para esta mudança
       return;
     }
-    pendingStateRef.current = state;
-    if (sendTimerRef.current) return;
+    if (sendTimerRef.current) return; // já tem um envio armado — ele vai pegar o state mais atual ao disparar
     sendTimerRef.current = setTimeout(() => {
       sendTimerRef.current = null;
-      if (pendingStateRef.current) {
-        room.send?.("casa:state", pendingStateRef.current);
-        pendingStateRef.current = null;
-      }
+      room.send?.("casa:state", stateRef.current);
     }, 140);
   }, [state, room]);
 
@@ -256,7 +258,7 @@ export default function MinhaCasa({ room }: Props) {
       ...s,
       items: [
         ...s.items,
-        { id: uid(), charId: c.id, x: 0.5, y: 0.7, scale: 1, flip: false, emotion: "neutro" },
+        { id: uid(), charId: c.id, x: 0.5, y: 0.31, scale: 1, flip: false, emotion: "neutro" },
       ],
     }));
   };
@@ -280,7 +282,7 @@ export default function MinhaCasa({ room }: Props) {
     const id = uid();
     setState((s) => ({
       ...s,
-      covers: [...s.covers, { id, x: 0.35, y: 0.35, w: 0.3, h: 0.25, label: "não tenho" }],
+      covers: [...s.covers, { id, x: 0.35, y: 0.15, w: 0.3, h: 0.25, label: "não tenho" }],
     }));
     setSelectedId(id);
   };
@@ -296,7 +298,7 @@ export default function MinhaCasa({ room }: Props) {
     const id = uid();
     setState((s) => ({
       ...s,
-      notes: [...s.notes, { id, x: 0.4, y: 0.4, w: 0.22, h: 0.18, text: "", color: "amarelo" }],
+      notes: [...s.notes, { id, x: 0.4, y: 0.17, w: 0.22, h: 0.18, text: "", color: "amarelo" }],
     }));
     setSelectedId(id);
   };
@@ -312,7 +314,7 @@ export default function MinhaCasa({ room }: Props) {
     const id = uid();
     setState((s) => ({
       ...s,
-      stickers: [...s.stickers, { id, x: 0.5, y: 0.5, scale: 1, emoji }],
+      stickers: [...s.stickers, { id, x: 0.5, y: 0.22, scale: 1, emoji }],
     }));
     setSelectedId(id);
   };

@@ -1,7 +1,7 @@
-import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html, OrbitControls, PerformanceMonitor, RoundedBox, Text, useTexture } from "@react-three/drei";
-import { DoorOpen, Eye, RotateCcw } from "lucide-react";
+import { DoorOpen, Eye, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import casaAvoLoading from "@/assets/casa-avo-loading.jpg";
 import * as THREE from "three";
@@ -53,11 +53,18 @@ type DragKind = "item" | "cover" | "note" | "sticker";
 type DragState = { id: string; kind: DragKind } | null;
 
 const ROOM_W = 16;
-const ROOM_D = 12;
+const ROOM_D = 12; // usado só na construção da casa (piso/paredes), não em posicionamento/tamanho de itens
+// Faixa de profundidade (Z) válida para colocar itens: casa + jardim da frente, a
+// mesma faixa que a câmera de "andar" já usa para clique-pra-andar (WalkCamera).
+// Fonte única de verdade — evita o item "aparecer em outro lugar" por causa de um
+// clamp de posicionamento diferente do que é visualmente andável/colocável.
+const SCENE_Z_MIN = -5.6;
+const SCENE_Z_MAX = 20.4;
+const SCENE_Z_SPAN = SCENE_Z_MAX - SCENE_Z_MIN;
 const toWorldX = (x: number) => (x - 0.5) * ROOM_W;
-const toWorldZ = (y: number) => (y - 0.5) * ROOM_D;
+const toWorldZ = (y: number) => SCENE_Z_MIN + y * SCENE_Z_SPAN;
 const toNormalizedX = (x: number) => THREE.MathUtils.clamp(x / ROOM_W + 0.5, 0.03, 0.97);
-const toNormalizedY = (z: number) => THREE.MathUtils.clamp(z / ROOM_D + 0.5, 0.04, 0.96);
+const toNormalizedY = (z: number) => THREE.MathUtils.clamp((z - SCENE_Z_MIN) / SCENE_Z_SPAN, 0.01, 0.99);
 
 const NOTE_COLORS: Record<CasaNote["color"], string> = {
   amarelo: "#fff1a8",
@@ -131,8 +138,12 @@ function Doorway({ x, z, rotation = 0, front = false }: { x: number; z: number; 
     }
   });
 
-  const halfWidth = front ? 1.08 : 0.72;
-  const frameWidth = front ? 2.5 : 1.55;
+  // halfWidth/frameWidth da porta da frente calibrados pro vão real da fachada
+  // (entre os trechos de parede em x=-2.43/2.43, largura 2.75 cada — vão de
+  // ±1.055), senão a porta ficava ~0.05 mais larga que o buraco e entrava na
+  // alvenaria dos dois lados.
+  const halfWidth = front ? 1.0 : 0.72;
+  const frameWidth = front ? 2.32 : 1.55;
   const panelWidth = front ? 1.02 : 0.65;
   const frameColor = front ? "#8c5a3c" : "#9a6845";
 
@@ -610,36 +621,33 @@ function FrontGarden({ lowPower, style = "florido" }: { lowPower: boolean; style
       </mesh>
       {[-5.8, -4.5, 4.5, 5.8].map((x, index) => (
         <group key={x} position={[x, 0, 7.6 + (index % 2) * 0.65]}>
-          <mesh position={[0, 0.24, 0]}><cylinderGeometry args={[0.26, 0.34, 0.48, 12]} /><meshStandardMaterial color={palette.pot} /></mesh>
-          <mesh position={[0, 0.72, 0]}><sphereGeometry args={[0.48, 14, 10]} /><meshStandardMaterial color={palette.bushes[index % 2]} roughness={0.9} /></mesh>
+          <mesh position={[0, 0.24, 0]} material={sharedMaterial(palette.pot, 0.82)}><cylinderGeometry args={[0.26, 0.34, 0.48, 12]} /></mesh>
+          <mesh position={[0, 0.72, 0]} material={sharedMaterial(palette.bushes[index % 2], 0.9)}><sphereGeometry args={[0.48, 14, 10]} /></mesh>
         </group>
       ))}
       {[-7, -6.45, -3.8, 3.8, 6.45, 7].map((x, index) => (
         <group key={x} position={[x, 0, 7 + (index % 2) * 0.38]}>
-          <mesh position={[0, 0.32, 0]}><cylinderGeometry args={[0.025, 0.035, 0.62, 7]} /><meshStandardMaterial color="#4d8454" roughness={0.95} /></mesh>
-          <mesh position={[0, 0.66, 0]}><sphereGeometry args={[0.18, 12, 8]} /><meshStandardMaterial color={palette.flowers[index % palette.flowers.length]} roughness={0.9} /></mesh>
+          <mesh position={[0, 0.32, 0]} material={sharedMaterial("#4d8454", 0.95)}><cylinderGeometry args={[0.025, 0.035, 0.62, 7]} /></mesh>
+          <mesh position={[0, 0.66, 0]} material={sharedMaterial(palette.flowers[index % palette.flowers.length], 0.9)}><sphereGeometry args={[0.18, 12, 8]} /></mesh>
         </group>
       ))}
       {[-2.9, 2.9].map((x, index) => (
         <group key={x} position={[x, 0, 7.1]}>
-          <mesh position={[0, 0.52, 0]}><sphereGeometry args={[0.72, 16, 12]} /><meshStandardMaterial color={palette.bushes[index % 2]} roughness={0.92} /></mesh>
+          <mesh position={[0, 0.52, 0]} material={sharedMaterial(palette.bushes[index % 2], 0.92)}><sphereGeometry args={[0.72, 16, 12]} /></mesh>
           {!lowPower && [-0.42, 0, 0.42].map((dx, i) => (
-            <mesh key={dx} position={[dx, 0.95 - i * 0.12, 0.5]}>
+            <mesh key={dx} position={[dx, 0.95 - i * 0.12, 0.5]} material={sharedMaterial(palette.flowers[i % palette.flowers.length], 0.85)}>
               <sphereGeometry args={[0.14, 10, 8]} />
-              <meshStandardMaterial color={palette.flowers[i % palette.flowers.length]} roughness={0.85} />
             </mesh>
           ))}
         </group>
       ))}
       {[-6.9, -6.3, -5.7, -5.1, -4.5, -3.9, 3.9, 4.5, 5.1, 5.7, 6.3, 6.9].map((x, index) => (
         <group key={`flower-bed-${x}`} position={[x, 0, 8.25 + (index % 3) * 0.22]}>
-          <mesh position={[0, 0.32, 0]}>
+          <mesh position={[0, 0.32, 0]} material={sharedMaterial(palette.bushes[index % 2], 0.95)}>
             <sphereGeometry args={[0.28, 10, 8]} />
-            <meshStandardMaterial color={palette.bushes[index % 2]} roughness={0.95} />
           </mesh>
-          <mesh position={[0, 0.58, 0.12]}>
+          <mesh position={[0, 0.58, 0.12]} material={sharedMaterial(palette.flowers[index % palette.flowers.length], 0.82)}>
             <sphereGeometry args={[0.13, 10, 8]} />
-            <meshStandardMaterial color={palette.flowers[index % palette.flowers.length]} roughness={0.82} />
           </mesh>
         </group>
       ))}
@@ -742,7 +750,7 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <Bathroom position={[5.15, 0.08, 1.25]} />
       <Bookshelf position={[-6.65, 0.08, 5.3]} rotation={Math.PI / 2} />
       <Desk position={[-4.6, 0.08, 4.95]} />
-      <Sofa position={[0, 0.08, 5.1]} color="#718e75" />
+      <Sofa position={[-1.7, 0.08, 5.1]} color="#718e75" />
       <Table position={[0, 0.08, 4.25]} />
       <Plant position={[-7.15, 0.08, -5.1]} />
       <Plant position={[2.05, 0.08, -5.1]} />
@@ -764,15 +772,18 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <Wall position={[0, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
       <Wall position={[-5.3, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
       <Wall position={[5.3, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
-      <Doorway x={-3.9} z={-0.95} />
-      <Doorway x={1.35} z={-0.95} />
-      <Doorway x={6.7} z={-0.95} />
+      {/* Portas centralizadas no meio de cada trecho de parede (largura 2.4,
+          porta com halfWidth 0.72 cabe com folga de ~0.48 de cada lado) —
+          antes ficavam deslocadas pro vão aberto ao lado e invadiam a parede. */}
+      <Doorway x={-5.3} z={-0.95} />
+      <Doorway x={0} z={-0.95} />
+      <Doorway x={5.3} z={-0.95} />
       <Wall position={[-5.3, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
       <Wall position={[0, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
       <Wall position={[5.3, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
-      <Doorway x={-3.9} z={3.55} />
-      <Doorway x={1.35} z={3.55} />
-      <Doorway x={6.7} z={3.55} />
+      <Doorway x={-5.3} z={3.55} />
+      <Doorway x={0} z={3.55} />
+      <Doorway x={5.3} z={3.55} />
 
       <Window position={[-5.1, 1.65, -5.88]} />
       <Window position={[0, 1.65, -5.88]} />
@@ -789,8 +800,8 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <RoomLabel position={[0, 0.13, 3.2]}>QUARTO</RoomLabel>
       <RoomLabel position={[5.2, 0.13, 3.2]}>BANHEIRO</RoomLabel>
       <RoomLabel position={[-5.2, 0.13, 5.7]}>ESTUDO</RoomLabel>
-      <RoomLabel position={[0, 0.13, 5.7]}>CONVIVÊNCIA</RoomLabel>
-      <RoomLabel position={[5.2, 0.13, 5.7]}>ENTRADA</RoomLabel>
+      <RoomLabel position={[0, 0.13, 5.7]}>ENTRADA</RoomLabel>
+      <RoomLabel position={[5.2, 0.13, 5.7]}>CONVIVÊNCIA</RoomLabel>
       <CeilingAndRoof visible={mode === "walk"} lowPower={lowPower} />
     </group>
   );
@@ -828,7 +839,7 @@ function LiteDollhouse({ mode, garden }: { mode: ViewMode; garden: GardenStyle }
       <LiteBox position={[0, 0.42, 1.2]} size={[2.8, 0.7, 1.65]} color="#688fac" />
       <LiteBox position={[5.15, 0.42, 1.25]} size={[1.6, 0.7, 1.1]} color="#d4e7e5" />
       <LiteBox position={[-4.6, 0.48, 4.95]} size={[1.8, 0.8, 0.75]} color="#c78e5d" />
-      <LiteBox position={[0, 0.48, 5.1]} size={[2.3, 0.8, 0.85]} color="#718e75" />
+      <LiteBox position={[-1.7, 0.48, 5.1]} size={[2.3, 0.8, 0.85]} color="#718e75" />
       <LiteFurniture />
       {[-5.8, -4.5, 4.5, 5.8].map((x, index) => (
         <mesh key={x} position={[x, 0.55, 7.6 + (index % 2) * 0.65]}><sphereGeometry args={[0.48, 8, 6]} /><meshStandardMaterial color={palette.bushes[index % 2]} roughness={0.9} /></mesh>
@@ -938,7 +949,7 @@ const HOUSE_COLLIDERS: readonly Collider[] = [
 ] as const;
 
 const isPassage = (x: number, z: number) => {
-  if (x < -7.7 || x > 7.7 || z < -5.7 || z > 20.8) return false;
+  if (x < -7.7 || x > 7.7 || z < SCENE_Z_MIN - 0.1 || z > SCENE_Z_MAX + 0.4) return false;
   for (let index = 0; index < HOUSE_COLLIDERS.length; index += 1) {
     const collider = HOUSE_COLLIDERS[index];
     if (x > collider[0] && x < collider[1] && z > collider[2] && z < collider[3]) return false;
@@ -982,8 +993,17 @@ function WalkCamera({ navigation, resetSignal, enabled, remoteCamera, onCamera }
     navigation.current.targetX = ENTRANCE_CAMERA.x;
     navigation.current.targetZ = ENTRANCE_CAMERA.z;
     remoteTarget.current = null;
+    // Autoconfigura o FOV ao montar (ver comentário equivalente em
+    // OverviewCamera) — necessário porque o Canvas não é mais recriado
+    // ao trocar de modo de câmera.
+    if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = 52;
+      camera.near = 0.08;
+      camera.far = 60;
+      camera.updateProjectionMatrix();
+    }
     invalidate();
-  }, [invalidate, resetSignal]);
+  }, [invalidate, resetSignal, camera]);
 
   const lastLocalInput = useRef(0);
   const appliedRemote = useRef(0);
@@ -1109,15 +1129,26 @@ function OverviewCamera() {
   useEffect(() => {
     camera.position.set(13.5, 15.2, 17.5);
     camera.lookAt(0, 0.65, 0);
+    // Autoconfigura o FOV/near/far ao montar: sem o remount do Canvas por modo
+    // (o `key={mode}` foi removido para evitar o soluço de troca de câmera),
+    // a câmera persiste entre "Visão geral" e "Entrar na casa", então cada
+    // controlador de câmera precisa aplicar seus próprios parâmetros.
+    if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = 42;
+      camera.near = 0.08;
+      camera.far = 60;
+      camera.updateProjectionMatrix();
+    }
     invalidate();
   }, [camera, invalidate]);
   return null;
 }
 
-const CharacterFigure = memo(function CharacterFigure({ item, definition, selected, onStart, onMove, onEnd }: {
+const CharacterFigure = memo(function CharacterFigure({ item, definition, selected, dragRef, onStart, onMove, onEnd }: {
   item: CasaPlaced;
   definition: CasaCharacter;
   selected: boolean;
+  dragRef: MutableRefObject<DragState>;
   onStart: (e: ThreeEvent<PointerEvent>) => void;
   onMove: (e: ThreeEvent<PointerEvent>) => void;
   onEnd: (e: ThreeEvent<PointerEvent>) => void;
@@ -1128,6 +1159,15 @@ const CharacterFigure = memo(function CharacterFigure({ item, definition, select
   const height = (definition.isPet ? 1.05 : 1.75) * item.scale;
   const width = height * (definition.isPet ? 1.1 : 0.68);
   const glow = EMOTION_COLORS[item.emotion] ?? EMOTION_COLORS.neutro;
+  const targetPos = useRef(new THREE.Vector3(toWorldX(item.x), 0, toWorldZ(item.y)));
+  targetPos.current.set(toWorldX(item.x), 0, toWorldZ(item.y));
+
+  // Posiciona de imediato ao montar (item novo, ou troca de sala) — só as
+  // atualizações remotas seguintes deslizam suavemente via useFrame abaixo.
+  useLayoutEffect(() => {
+    group.current?.position.copy(targetPos.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -1140,17 +1180,33 @@ const CharacterFigure = memo(function CharacterFigure({ item, definition, select
   useFrame((_, rawDelta) => {
     if (!group.current) return;
     const target = selected ? 1.04 : 1;
-    if (Math.abs(group.current.scale.x - target) < 0.002) {
+    if (Math.abs(group.current.scale.x - target) > 0.002) {
+      const delta = Math.min(rawDelta, 0.05);
+      group.current.scale.setScalar(THREE.MathUtils.lerp(group.current.scale.x, target, 1 - Math.exp(-9 * delta)));
+      invalidate();
+    } else {
       group.current.scale.setScalar(target);
+    }
+
+    // Quem está arrastando ESTE item vê resposta imediata (sem atraso); quem
+    // só está observando vê a posição deslizar suavemente entre os pacotes
+    // "casa:move" recebidos, em vez de teleportar em saltos discretos.
+    const isDraggingThis = dragRef.current?.kind === "item" && dragRef.current.id === item.id;
+    if (isDraggingThis) {
+      group.current.position.copy(targetPos.current);
+      return;
+    }
+    if (group.current.position.distanceToSquared(targetPos.current) < 0.0004) {
+      group.current.position.copy(targetPos.current);
       return;
     }
     const delta = Math.min(rawDelta, 0.05);
-    group.current.scale.setScalar(THREE.MathUtils.lerp(group.current.scale.x, target, 1 - Math.exp(-9 * delta)));
+    group.current.position.lerp(targetPos.current, 1 - Math.exp(-14 * delta));
     invalidate();
   });
 
   return (
-    <group ref={group} position={[toWorldX(item.x), 0, toWorldZ(item.y)]}>
+    <group ref={group}>
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[width * 0.46, 24]} />
         <meshBasicMaterial color={glow} transparent opacity={selected ? 0.72 : item.emotion === "neutro" ? 0.18 : 0.42} depthWrite={false} />
@@ -1326,7 +1382,7 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
             if (!pointer || pointer.id !== event.pointerId) return;
             if (!pointer.moved) {
               navigation.current.targetX = THREE.MathUtils.clamp(event.point.x, -7.6, 7.6);
-              navigation.current.targetZ = THREE.MathUtils.clamp(event.point.z, -5.6, 20.4);
+              navigation.current.targetZ = THREE.MathUtils.clamp(event.point.z, SCENE_Z_MIN, SCENE_Z_MAX);
               navigation.current.moving = true;
               navigation.current.localInput = performance.now();
             }
@@ -1351,6 +1407,7 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
               item={item}
               definition={definition}
               selected={props.selectedId === item.id}
+              dragRef={drag}
               onStart={(e) => startDrag("item", item.id, e)}
               onMove={moveDrag}
               onEnd={endDrag}
@@ -1367,7 +1424,7 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
           >
-            <planeGeometry args={[cover.w * ROOM_W, cover.h * ROOM_D]} />
+            <planeGeometry args={[cover.w * ROOM_W, cover.h * SCENE_Z_SPAN]} />
             <meshStandardMaterial color="#eee5d4" transparent opacity={0.88} roughness={0.9} />
           </mesh>
           <Text position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.22} color="#76583b" anchorX="center" anchorY="middle" maxWidth={cover.w * ROOM_W * 0.86}>
@@ -1384,7 +1441,7 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
           >
-            <planeGeometry args={[Math.max(0.9, note.w * ROOM_W), Math.max(0.7, note.h * ROOM_D)]} />
+            <planeGeometry args={[Math.max(0.9, note.w * ROOM_W), Math.max(0.7, note.h * SCENE_Z_SPAN)]} />
             <meshStandardMaterial color={NOTE_COLORS[note.color]} roughness={0.94} />
           </mesh>
           {props.selectedId === note.id ? (
@@ -1487,30 +1544,29 @@ export default function MinhaCasa3D(props: Props) {
     props.onGardenChange?.(value);
   };
   const navigation = useRef<NavigationInput>({ targetX: ENTRANCE_CAMERA.x, targetZ: ENTRANCE_CAMERA.z, moving: false, lookX: 0, lookY: 0, localInput: 0 });
-
+  // Quantas janelas seguidas de boa performance o PerformanceMonitor já viu —
+  // usado pra só sair do modo simplificado depois de 2 janelas boas seguidas
+  // (evita ficar piscando entre os dois modos numa única amostra boa).
+  const inclineStreak = useRef(0);
 
   useEffect(() => {
+    // Só define o estado INICIAL (tela pequena/toque = começa simplificado).
+    // Não fica reforçando lowPower=true a cada redimensionamento depois disso —
+    // dali em diante quem decide é o PerformanceMonitor (medição real de
+    // desempenho), senão a tela estreita nunca deixa a casa "destravar" mesmo
+    // quando o dispositivo aguenta o modo detalhado (causa do "design quebrado"
+    // ficar travado pra sempre).
     const coarse = window.matchMedia("(pointer: coarse)");
     const narrow = window.matchMedia("(max-width: 1024px)");
-    const update = () => {
-      const low = coarse.matches || narrow.matches;
-      setLowPower(low);
-      setDpr(low ? 0.75 : 1);
-    };
-    update();
-    coarse.addEventListener("change", update);
-    narrow.addEventListener("change", update);
-    return () => {
-      coarse.removeEventListener("change", update);
-      narrow.removeEventListener("change", update);
-    };
+    const low = coarse.matches || narrow.matches;
+    setLowPower(low);
+    setDpr(low ? 0.75 : 1);
   }, []);
 
   return (
     <Game3DGuard fallback={<Fallback />}>
       <div className="relative h-full w-full bg-secondary">
         <Canvas
-          key={mode}
           fallback={<Fallback />}
           shadows={false}
           dpr={dpr}
@@ -1524,10 +1580,19 @@ export default function MinhaCasa3D(props: Props) {
             iterations={4}
             threshold={0.7}
             onDecline={() => {
+              inclineStreak.current = 0;
               setLowPower(true);
               setDpr((current) => Math.max(0.6, Number((current - 0.2).toFixed(2))));
             }}
-            onIncline={() => setDpr((current) => Math.min(lowPower ? 0.85 : 1, Number((current + 0.1).toFixed(2))))}
+            onIncline={() => {
+              inclineStreak.current += 1;
+              setDpr((current) => Math.min(1, Number((current + 0.1).toFixed(2))));
+              // Só sai do modo simplificado depois de 2 janelas seguidas de boa
+              // performance — evita ficar travado pra sempre num único soluço
+              // (troca de aba, textura carregando) e evita piscar entre os dois
+              // modos numa amostra só.
+              if (inclineStreak.current >= 2) setLowPower(false);
+            }}
           />
           <Scene props={{ ...props, lowPower }} mode={mode} navigation={navigation} resetSignal={resetSignal} garden={garden} />
         </Canvas>
@@ -1561,6 +1626,22 @@ export default function MinhaCasa3D(props: Props) {
           {mode === "walk" && (
             <Button size="icon" variant="secondary" onClick={() => setResetSignal((value) => value + 1)} title="Voltar à porta" className="shadow-lg">
               <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+          {lowPower && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shadow-lg"
+              title="Forçar o visual detalhado da casa"
+              onClick={() => {
+                inclineStreak.current = 0;
+                setDpr(1);
+                setLowPower(false);
+              }}
+            >
+              <Sparkles className="h-4 w-4" />
+              Melhorar qualidade
             </Button>
           )}
         </div>
