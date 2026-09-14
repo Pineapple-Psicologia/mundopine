@@ -339,6 +339,7 @@ function Desk({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <RoundedBox args={[1.8, 0.14, 0.75]} radius={0.06} position={[0, 0.75, 0]}><meshStandardMaterial color="#c78e5d" /></RoundedBox>
+      <RoundedBox args={[0.22, 0.07, 0.16]} radius={0.02} position={[0, 0.855, -0.1]}><meshStandardMaterial color="#394f58" roughness={0.3} /></RoundedBox>
       <mesh position={[0, 1.18, -0.1]}><boxGeometry args={[0.92, 0.58, 0.08]} /><meshStandardMaterial color="#394f58" metalness={0.2} roughness={0.25} /></mesh>
       <mesh position={[0, 1.18, -0.04]}><planeGeometry args={[0.72, 0.4]} /><meshBasicMaterial color="#8ac7d4" /></mesh>
       <RoundedBox args={[0.75, 0.16, 0.72]} radius={0.08} position={[0, 0.42, 0.85]}><meshStandardMaterial color="#d4876a" /></RoundedBox>
@@ -441,18 +442,18 @@ function MemoryFrames({ position }: { position: [number, number, number] }) {
 function KitchenMemories({ lowPower }: { lowPower: boolean }) {
   return (
     <group>
-      <group position={[0, 0.74, -3.45]}>
+      <group position={[0, 0.9, -3.45]}>
         <mesh position={[0, 0.13, 0]}><cylinderGeometry args={[0.52, 0.58, 0.16, 28]} /><meshStandardMaterial color="#f1ce78" roughness={0.82} /></mesh>
         <mesh position={[0, 0.25, 0]}><cylinderGeometry args={[0.36, 0.43, 0.12, 28]} /><meshStandardMaterial color="#bd704e" roughness={0.88} /></mesh>
         <mesh position={[0, 0.34, 0]}><sphereGeometry args={[0.05, 12, 8]} /><meshStandardMaterial color="#d8efe0" /></mesh>
       </group>
-      <group position={[5.8, 1.2, -4.28]}>
+      <group position={[5.8, 1.11, -4.28]}>
         <mesh><sphereGeometry args={[0.25, 18, 12, 0, Math.PI * 2, 0, Math.PI / 1.75]} /><meshStandardMaterial color="#79a99e" roughness={0.5} /></mesh>
         <mesh position={[0.31, 0.02, 0]} rotation-z={Math.PI / 2}><torusGeometry args={[0.16, 0.035, 8, 16, Math.PI * 1.3]} /><meshStandardMaterial color="#79a99e" /></mesh>
         <mesh position={[-0.25, 0.16, 0]} rotation-z={-0.55}><coneGeometry args={[0.08, 0.36, 12]} /><meshStandardMaterial color="#79a99e" /></mesh>
       </group>
       {!lowPower && (
-        <group position={[4.55, 1.16, -4.28]}>
+        <group position={[4.55, 1.205, -4.28]}>
           {[-0.24, 0, 0.24].map((x, index) => <mesh key={x} position-x={x}><cylinderGeometry args={[0.1, 0.09, 0.3, 14]} /><meshStandardMaterial color={["#df8068", "#f1cf78", "#72a18c"][index]} roughness={0.58} /></mesh>)}
         </group>
       )}
@@ -466,8 +467,8 @@ function GrandmaDecor({ lowPower }: { lowPower: boolean }) {
       <CrochetRug position={[-5.1, 0.19, -3.05]} color="#c76158" scale={0.9} />
       <CrochetRug position={[0, 0.19, 4.8]} color="#6f9b82" scale={0.72} />
       <RockingChair position={[-6.65, 0.08, -2.55]} rotation={0.48} />
-      <GrandmotherClock position={[-7.72, 0.08, -1.75]} />
-      <MemoryFrames position={[-5.1, 1.78, -5.76]} />
+      <GrandmotherClock position={[-7.4, 0.08, -1.35]} />
+      <MemoryFrames position={[-7.0, 1.78, -5.78]} />
       <KitchenMemories lowPower={lowPower} />
       {!lowPower && (
         <>
@@ -475,7 +476,7 @@ function GrandmaDecor({ lowPower }: { lowPower: boolean }) {
             <mesh><cylinderGeometry args={[0.09, 0.12, 0.25, 14]} /><meshStandardMaterial color="#f4e6c8" roughness={0.8} /></mesh>
             <mesh position={[0, 0.24, 0]}><sphereGeometry args={[0.18, 14, 10]} /><meshStandardMaterial color="#db7868" roughness={0.85} /></mesh>
           </group>
-          <group position={[0.05, 0.82, 4.2]}>
+          <group position={[-5.1, 0.93, -2.7]}>
             <mesh><boxGeometry args={[0.7, 0.42, 0.3]} /><meshStandardMaterial color="#7f533d" roughness={0.66} /></mesh>
             <mesh position={[0, 0.06, 0.17]}><planeGeometry args={[0.47, 0.2]} /><meshStandardMaterial color="#e8c377" emissive="#d59f4e" emissiveIntensity={0.08} /></mesh>
             <mesh position={[-0.23, -0.13, 0.18]}><circleGeometry args={[0.045, 12]} /><meshStandardMaterial color="#ddc491" /></mesh>
@@ -530,14 +531,14 @@ function Pendant({ position, lowPower }: { position: [number, number, number]; l
 function DecorativeDetails({ lowPower }: { lowPower: boolean }) {
   return (
     <group>
-      <WallPicture position={[-5.15, 1.72, -5.78]} color="#e57f68" />
-      <WallPicture position={[0, 1.72, -5.78]} color="#6aa6a2" />
-      <WallPicture position={[5.1, 1.72, -5.78]} color="#e8b85d" />
-      <FloorLamp position={[-7.05, 0.08, -5.05]} lowPower={lowPower} />
-      <FloorLamp position={[1.85, 0.08, 5.15]} lowPower={lowPower} />
+      <WallPicture position={[-3.4, 1.72, -5.78]} color="#e57f68" />
+      <WallPicture position={[1.55, 1.72, -5.78]} color="#6aa6a2" />
+      <WallPicture position={[7.0, 1.72, -5.78]} color="#e8b85d" />
+      <FloorLamp position={[-7.5, 0.08, -4.3]} lowPower={lowPower} />
+      <FloorLamp position={[6.5, 0.08, 5.0]} lowPower={lowPower} />
       <Pendant position={[0, 2.45, -3.45]} lowPower={lowPower} />
       {!lowPower && <Pendant position={[5.25, 2.42, -3.45]} lowPower={false} />}
-      <group position={[0, 0.68, -3.45]}>
+      <group position={[0, 0.95, -3.45]}>
         <mesh><sphereGeometry args={[0.25, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} /><meshStandardMaterial color="#e4b96b" roughness={0.65} /></mesh>
         {[-0.13, 0.02, 0.16].map((x, index) => <mesh key={x} position={[x, 0.16 + index * 0.03, 0]}><sphereGeometry args={[0.1, 12, 8]} /><meshStandardMaterial color={index === 1 ? "#7aa561" : "#dc7656"} roughness={0.75} /></mesh>)}
       </group>
@@ -545,7 +546,7 @@ function DecorativeDetails({ lowPower }: { lowPower: boolean }) {
         <>
           <Plant position={[-2.05, 0.08, 2.95]} />
           <Plant position={[2.05, 0.08, 2.95]} />
-          <RoundedBox args={[1.2, 0.08, 0.7]} radius={0.04} position={[5.1, 0.24, 4.7]}><meshStandardMaterial color="#79a79e" roughness={0.9} /></RoundedBox>
+          <RoundedBox args={[1.2, 0.08, 0.7]} radius={0.04} position={[5.25, 0.24, 5.0]}><meshStandardMaterial color="#79a79e" roughness={0.9} /></RoundedBox>
         </>
       )}
     </group>
@@ -668,6 +669,14 @@ function FrontGarden({ lowPower, style = "florido" }: { lowPower: boolean; style
           <mesh position={[0, 2.56, 0]}><cylinderGeometry args={[0.3, 0.24, 0.24, 20]} /><meshStandardMaterial color="#efe0c8" roughness={0.78} /></mesh>
         </group>
       ))}
+      {/* Vasinhos dos dois lados da porta, embaixo da varanda — hoje o telhado
+          ficava sobre um piso vazio, sem nenhum elemento de "boas-vindas". */}
+      {[-0.85, 0.85].map((x) => (
+        <group key={`porch-pot-${x}`} position={[x, 0, 6.3]}>
+          <mesh position={[0, 0.2, 0]} material={sharedMaterial(palette.pot, 0.82)}><cylinderGeometry args={[0.22, 0.28, 0.4, 12]} /></mesh>
+          <mesh position={[0, 0.58, 0]} material={sharedMaterial(palette.bushes[0], 0.9)}><sphereGeometry args={[0.34, 14, 10]} /></mesh>
+        </group>
+      ))}
       <mesh position={[0, 2.76, 6.6]}><boxGeometry args={[6.1, 0.22, 2.1]} /><meshStandardMaterial color="#f8eeda" roughness={0.8} /></mesh>
       <group position={[0, 3.06, 6.9]} rotation-x={-0.3}>
         <mesh><boxGeometry args={[6.5, 0.16, 2.3]} /><meshStandardMaterial color="#cf6f52" roughness={0.8} /></mesh>
@@ -717,10 +726,23 @@ function InteriorTrim() {
       {[-2.55, 2.55].map((x) => (
         <group key={x}>
           <mesh position={[x, 0.18, -3.55]}><boxGeometry args={[0.09, 0.22, 2.2]} /><meshStandardMaterial color={trim} /></mesh>
-          <mesh position={[x, 0.18, 1.25]}><boxGeometry args={[0.09, 0.22, 2]} /><meshStandardMaterial color={trim} /></mesh>
+          <mesh position={[x, 0.18, 1.835]}><boxGeometry args={[0.09, 0.22, 3.27]} /><meshStandardMaterial color={trim} /></mesh>
         </group>
       ))}
-      {[-0.95, 3.55].map((z) => [-5.3, 0, 5.3].map((x) => <mesh key={`${z}-${x}`} position={[x, 0.18, z]}><boxGeometry args={[2.35, 0.22, 0.09]} /><meshStandardMaterial color={trim} /></mesh>))}
+      {/* Rodapé da divisória z=-0.95: acompanha os 6 trechos de parede novos
+          (largura de cada trecho menos ~0.1 de margem visual). */}
+      {[
+        [-7.175, 1.55], [-3.6, 1.0], [-1.575, 0.85],
+        [1.575, 0.85], [3.6, 1.0], [7.175, 1.55],
+      ].map(([x, w]) => (
+        <mesh key={`row1-${x}`} position={[x, 0.18, -0.95]}><boxGeometry args={[w, 0.22, 0.09]} /><meshStandardMaterial color={trim} /></mesh>
+      ))}
+      {/* Rodapé da divisória z=3.55: 4 trechos (sem cruzamento de coluna nessa linha). */}
+      {[
+        [-7.175, 1.55], [-2.625, 2.95], [2.625, 2.95], [7.175, 1.55],
+      ].map(([x, w]) => (
+        <mesh key={`row2-${x}`} position={[x, 0.18, 3.55]}><boxGeometry args={[w, 0.22, 0.09]} /><meshStandardMaterial color={trim} /></mesh>
+      ))}
     </group>
   );
 }
@@ -737,9 +759,9 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <RoomFloor position={[-5.25, 0, 1.25]} size={[5.5, 4.5]} color="#d7b69f" rug="#b8799b" />
       <RoomFloor position={[0, 0, 1.25]} size={[5, 4.5]} color="#c7af8c" rug="#6f9581" />
       <RoomFloor position={[5.25, 0, 1.25]} size={[5.5, 4.5]} color="#bfc8c4" rug="#6f92a6" />
-      <RoomFloor position={[-5.25, 0, 4.85]} size={[5.5, 2.7]} color="#b8a98d" />
-      <RoomFloor position={[0, 0, 4.85]} size={[5, 2.7]} color="#c9b893" rug="#b87858" />
-      <RoomFloor position={[5.25, 0, 4.85]} size={[5.5, 2.7]} color="#b5c0b1" />
+      <RoomFloor position={[-5.25, 0, 4.8]} size={[5.5, 2.6]} color="#b8a98d" />
+      <RoomFloor position={[0, 0, 4.8]} size={[5, 2.6]} color="#c9b893" rug="#b87858" />
+      <RoomFloor position={[5.25, 0, 4.8]} size={[5.5, 2.6]} color="#b5c0b1" />
 
       <Sofa position={[-5.1, 0.08, -4.2]} color="#b95f52" />
       <Table position={[-5.1, 0.08, -2.7]} />
@@ -748,10 +770,13 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <Bed position={[-5.2, 0.08, 1.2]} color="#c37c99" />
       <Bed position={[0, 0.08, 1.2]} color="#688fac" />
       <Bathroom position={[5.15, 0.08, 1.25]} />
-      <Bookshelf position={[-6.65, 0.08, 5.3]} rotation={Math.PI / 2} />
-      <Desk position={[-4.6, 0.08, 4.95]} />
-      <Sofa position={[-1.7, 0.08, 5.1]} color="#718e75" />
-      <Table position={[0, 0.08, 4.25]} />
+      <Bookshelf position={[-6.65, 0.08, 5.2]} rotation={Math.PI / 2} />
+      <Desk position={[-4.6, 0.08, 4.85]} />
+      {/* ENTRADA fica só com o tapete de boas-vindas (hall enxuto); o sofá e a
+          luminária que estavam aqui foram pra CONVIVÊNCIA, que não tinha
+          nenhum assento. A mesinha redonda foi removida (não cabia sem ficar
+          colada na porta). */}
+      <Sofa position={[5.25, 0.08, 5.4]} color="#718e75" />
       <Plant position={[-7.15, 0.08, -5.1]} />
       <Plant position={[2.05, 0.08, -5.1]} />
       <Plant position={[7.15, 0.08, 5.2]} />
@@ -759,31 +784,49 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <GrandmaDecor lowPower={lowPower} />
 
       <Wall position={[0, 1.45, -6]} size={[16.2, 2.9, 0.18]} color="#f5dfc4" />
-      <Wall position={[-8, 1.45, 0]} size={[0.18, 2.9, 12]} color="#f0d8bd" />
-      <Wall position={[8, 1.45, 0]} size={[0.18, 2.9, 12]} color="#f0d8bd" />
+      <Wall position={[-8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
+      <Wall position={[8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
       <FrontFacade />
 
+      {/* Divisorias de coluna (SALA|JANTAR|COZINHA e os dois QUARTOs|BANHEIRO).
+          Trecho de tras fica igual; trecho da frente foi esticado ate z=3.47
+          pra fechar o vao que sobrava entre os dois quartos (nao tinha parede
+          nem porta ali antes). */}
       <Wall position={[-2.55, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} />
-      <Wall position={[-2.55, 1.45, 1.2]} size={[0.16, 2.9, 2]} />
+      <Wall position={[-2.55, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} />
       <Doorway x={-2.55} z={-0.95} rotation={Math.PI / 2} />
       <Wall position={[2.55, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} />
-      <Wall position={[2.55, 1.45, 1.2]} size={[0.16, 2.9, 2]} />
+      <Wall position={[2.55, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} />
       <Doorway x={2.55} z={-0.95} rotation={Math.PI / 2} />
-      <Wall position={[0, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
-      <Wall position={[-5.3, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
-      <Wall position={[5.3, 1.45, -0.95]} size={[2.4, 2.9, 0.16]} />
-      {/* Portas centralizadas no meio de cada trecho de parede (largura 2.4,
-          porta com halfWidth 0.72 cabe com folga de ~0.48 de cada lado) —
-          antes ficavam deslocadas pro vão aberto ao lado e invadiam a parede. */}
-      <Doorway x={-5.3} z={-0.95} />
+
+      {/* Divisoria de linha z=-0.95 (frente|fundo): antes cada trecho de 2.4
+          ficava centralizado no MEIO do proprio comodo com uma porta pintada
+          por cima (porta decorativa dentro de parede solida) — os buracos de
+          passagem de verdade eram os vaos abertos do lado, sem parede nem
+          porta nenhuma. Agora a parede cobre a linha inteira (16m) com um vao
+          real de 2.2 em cada porta, do mesmo jeito que a divisoria de coluna
+          acima ja fazia certo, mais dois "cruzamentos" abertos em x=-2.55/2.55
+          pra nao tampar as portas rotacionadas logo acima. */}
+      <Wall position={[-7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} />
+      <Doorway x={-5.25} z={-0.95} />
+      <Wall position={[-3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
+      <Wall position={[-1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
       <Doorway x={0} z={-0.95} />
-      <Doorway x={5.3} z={-0.95} />
-      <Wall position={[-5.3, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
-      <Wall position={[0, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
-      <Wall position={[5.3, 1.45, 3.55]} size={[2.4, 2.9, 0.16]} />
-      <Doorway x={-5.3} z={3.55} />
+      <Wall position={[1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
+      <Wall position={[3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
+      <Doorway x={5.25} z={-0.95} />
+      <Wall position={[7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} />
+
+      {/* Divisoria de linha z=3.55 (fundo|ESTUDO-ENTRADA-CONVIVENCIA): essa
+          fileira nao tem divisoria de coluna (espaco aberto de proposito
+          entre ESTUDO/ENTRADA/CONVIVENCIA), entao nao precisa de cruzamento. */}
+      <Wall position={[-7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} />
+      <Doorway x={-5.25} z={3.55} />
+      <Wall position={[-2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} />
       <Doorway x={0} z={3.55} />
-      <Doorway x={5.3} z={3.55} />
+      <Wall position={[2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} />
+      <Doorway x={5.25} z={3.55} />
+      <Wall position={[7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} />
 
       <Window position={[-5.1, 1.65, -5.88]} />
       <Window position={[0, 1.65, -5.88]} />
@@ -820,17 +863,29 @@ function LiteDollhouse({ mode, garden }: { mode: ViewMode; garden: GardenStyle }
       <LiteBox position={[0, -0.1, 13.4]} size={[19, 0.18, 14.7]} color={palette.grass} />
       <LiteBox position={[0, 0.01, 13.2]} size={[1.55, 0.08, 14.5]} color={palette.path} />
       <LiteBox position={[0, 0.02, 6.55]} size={[5.7, 0.18, 1.45]} color="#d7b68e" />
-      {[-5.25, 0, 5.25].flatMap((x) => [-3.5, 1.25, 4.85].map((z) => (
-        <LiteBox key={`floor-${x}-${z}`} position={[x, 0, z]} size={[x === 0 ? 4.9 : 5.35, 0.14, z === 4.85 ? 2.55 : z === 1.25 ? 4.35 : 4.85]} color={z < 0 ? "#d0aa7c" : z < 4 ? "#cfb49b" : "#b9b399"} />
+      {[-5.25, 0, 5.25].flatMap((x) => [-3.5, 1.25, 4.8].map((z) => (
+        <LiteBox key={`floor-${x}-${z}`} position={[x, 0, z]} size={[x === 0 ? 4.9 : 5.35, 0.14, z === 4.8 ? 2.6 : z === 1.25 ? 4.35 : 4.85]} color={z < 0 ? "#d0aa7c" : z < 4 ? "#cfb49b" : "#b9b399"} />
       )))}
       <LiteBox position={[0, 1.45, -6]} size={[16.2, 2.9, 0.18]} color="#f5dfc4" />
-      <LiteBox position={[-8, 1.45, 0]} size={[0.18, 2.9, 12]} color="#f0d8bd" />
-      <LiteBox position={[8, 1.45, 0]} size={[0.18, 2.9, 12]} color="#f0d8bd" />
+      <LiteBox position={[-8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
+      <LiteBox position={[8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
       {[-2.55, 2.55].flatMap((x) => [
         <LiteBox key={`${x}-back`} position={[x, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} color="#f7f0e5" />,
-        <LiteBox key={`${x}-front`} position={[x, 1.45, 1.2]} size={[0.16, 2.9, 2]} color="#f7f0e5" />,
+        <LiteBox key={`${x}-front`} position={[x, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} color="#f7f0e5" />,
       ])}
-      {[-0.95, 3.55].flatMap((z) => [-5.3, 0, 5.3].map((x) => <LiteBox key={`${z}-${x}`} position={[x, 1.45, z]} size={[2.4, 2.9, 0.16]} color="#f7f0e5" />))}
+      {/* Mesmo layout de paredes/vãos da versão detalhada (ver Dollhouse) —
+          sem folha de porta desenhada aqui (estilo "lite"), mas os vãos
+          precisam ficar nos mesmos lugares reais. */}
+      <LiteBox position={[-7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
       <LiteFacade mode={mode} />
       <LiteBox position={[-5.1, 0.48, -4.2]} size={[2.3, 0.8, 0.85]} color="#b95f52" />
       <LiteBox position={[0, 0.48, -3.45]} size={[2.1, 0.8, 1.05]} color="#bd8a5c" />
@@ -838,8 +893,10 @@ function LiteDollhouse({ mode, garden }: { mode: ViewMode; garden: GardenStyle }
       <LiteBox position={[-5.2, 0.42, 1.2]} size={[2.8, 0.7, 1.65]} color="#c37c99" />
       <LiteBox position={[0, 0.42, 1.2]} size={[2.8, 0.7, 1.65]} color="#688fac" />
       <LiteBox position={[5.15, 0.42, 1.25]} size={[1.6, 0.7, 1.1]} color="#d4e7e5" />
-      <LiteBox position={[-4.6, 0.48, 4.95]} size={[1.8, 0.8, 0.75]} color="#c78e5d" />
-      <LiteBox position={[-1.7, 0.48, 5.1]} size={[2.3, 0.8, 0.85]} color="#718e75" />
+      <LiteBox position={[-4.6, 0.48, 4.85]} size={[1.8, 0.8, 0.75]} color="#c78e5d" />
+      {/* Sofá da ENTRADA foi pra CONVIVÊNCIA (mesma realocação da versão
+          detalhada) — o hall fica só com o piso/tapete. */}
+      <LiteBox position={[5.25, 0.48, 5.4]} size={[2.3, 0.8, 0.85]} color="#718e75" />
       <LiteFurniture />
       {[-5.8, -4.5, 4.5, 5.8].map((x, index) => (
         <mesh key={x} position={[x, 0.55, 7.6 + (index % 2) * 0.65]}><sphereGeometry args={[0.48, 8, 6]} /><meshStandardMaterial color={palette.bushes[index % 2]} roughness={0.9} /></mesh>
@@ -940,12 +997,15 @@ const wall = (minX: number, maxX: number, minZ: number, maxZ: number): Collider 
 // Paredes são convertidas uma única vez em retângulos 2D. A checagem por quadro
 // fica sem alocações, raycasts ou leitura da árvore 3D.
 const HOUSE_COLLIDERS: readonly Collider[] = [
-  wall(-8.1, 8.1, -6.1, -5.9), wall(-8.1, -7.9, -6, 6), wall(7.9, 8.1, -6, 6),
+  wall(-8.1, 8.1, -6.1, -5.9), wall(-8.1, -7.9, -6, 6.12), wall(7.9, 8.1, -6, 6.12),
   wall(-8.1, -1.08, 5.9, 6.4), wall(1.08, 8.1, 5.9, 6.4),
   wall(-2.63, -2.47, -6, -1.73), wall(-2.63, -2.47, -0.17, 3.5),
   wall(2.47, 2.63, -6, -1.73), wall(2.47, 2.63, -0.17, 3.5),
-  wall(-8, -4.68, -1.03, -0.87), wall(-3.12, 0.57, -1.03, -0.87), wall(2.13, 5.92, -1.03, -0.87), wall(7.48, 8, -1.03, -0.87),
-  wall(-8, -4.68, 3.47, 3.63), wall(-3.12, 0.57, 3.47, 3.63), wall(2.13, 5.92, 3.47, 3.63), wall(7.48, 8, 3.47, 3.63),
+  wall(-8, -6.35, -1.03, -0.87), wall(-4.15, -3.05, -1.03, -0.87),
+  wall(-2.05, -1.1, -1.03, -0.87), wall(1.1, 2.05, -1.03, -0.87),
+  wall(3.05, 4.15, -1.03, -0.87), wall(6.35, 8, -1.03, -0.87),
+  wall(-8, -6.35, 3.47, 3.63), wall(-4.15, -1.1, 3.47, 3.63),
+  wall(1.1, 4.15, 3.47, 3.63), wall(6.35, 8, 3.47, 3.63),
 ] as const;
 
 const isPassage = (x: number, z: number) => {
