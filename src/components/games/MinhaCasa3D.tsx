@@ -140,10 +140,10 @@ function Doorway({ x, z, rotation = 0, front = false }: { x: number; z: number; 
 
   // halfWidth/frameWidth da porta da frente calibrados pro vão real da fachada
   // (entre os trechos de parede em x=-2.43/2.43, largura 2.75 cada — vão de
-  // ±1.055), senão a porta ficava ~0.05 mais larga que o buraco e entrava na
-  // alvenaria dos dois lados.
-  const halfWidth = front ? 1.0 : 0.72;
-  const frameWidth = front ? 2.32 : 1.55;
+  // ±1.055). O poste da frente tem 0.2 de espessura (metade 0.1), então o
+  // poste precisa ficar em halfWidth+0.1 ≤ 1.055 pra não invadir a parede.
+  const halfWidth = front ? 0.93 : 0.72;
+  const frameWidth = front ? 2.2 : 1.55;
   const panelWidth = front ? 1.02 : 0.65;
   const frameColor = front ? "#8c5a3c" : "#9a6845";
 
@@ -175,8 +175,8 @@ function Doorway({ x, z, rotation = 0, front = false }: { x: number; z: number; 
       <mesh position={[0, 2.28, 0]}><boxGeometry args={[frameWidth, front ? 0.22 : 0.14, 0.24]} /><meshStandardMaterial color={frameColor} roughness={0.68} /></mesh>
       {front && (
         <>
-          <group ref={leftDoor} position={[-1.01, 0, -0.08]}>{doorLeaf(1)}</group>
-          <group ref={rightDoor} position={[1.01, 0, -0.08]}>{doorLeaf(-1)}</group>
+          <group ref={leftDoor} position={[-0.86, 0, -0.08]}>{doorLeaf(1)}</group>
+          <group ref={rightDoor} position={[0.86, 0, -0.08]}>{doorLeaf(-1)}</group>
           <mesh position={[0, 0.06, 0.16]}><boxGeometry args={[2.5, 0.12, 0.7]} /><meshStandardMaterial color="#c9a882" roughness={0.9} /></mesh>
         </>
       )}
@@ -725,21 +725,21 @@ function InteriorTrim() {
       {[-7.82, 7.82].map((x) => <mesh key={x} position={[x, 0.18, 0]}><boxGeometry args={[0.09, 0.22, 11.6]} /><meshStandardMaterial color={trim} roughness={0.72} /></mesh>)}
       {[-2.55, 2.55].map((x) => (
         <group key={x}>
-          <mesh position={[x, 0.18, -3.55]}><boxGeometry args={[0.09, 0.22, 2.2]} /><meshStandardMaterial color={trim} /></mesh>
-          <mesh position={[x, 0.18, 1.835]}><boxGeometry args={[0.09, 0.22, 3.27]} /><meshStandardMaterial color={trim} /></mesh>
+          <mesh position={[x, 0.18, -3.1875]}><boxGeometry args={[0.09, 0.22, 2.875]} /><meshStandardMaterial color={trim} /></mesh>
+          <mesh position={[x, 0.18, 1.66]}><boxGeometry args={[0.09, 0.22, 3.62]} /><meshStandardMaterial color={trim} /></mesh>
         </group>
       ))}
       {/* Rodapé da divisória z=-0.95: acompanha os 6 trechos de parede novos
           (largura de cada trecho menos ~0.1 de margem visual). */}
       {[
-        [-7.175, 1.55], [-3.6, 1.0], [-1.575, 0.85],
-        [1.575, 0.85], [3.6, 1.0], [7.175, 1.55],
+        [-7.025, 1.85], [-3.9, 1.0], [-1.275, 0.85],
+        [1.275, 0.85], [3.9, 1.0], [7.025, 1.85],
       ].map(([x, w]) => (
         <mesh key={`row1-${x}`} position={[x, 0.18, -0.95]}><boxGeometry args={[w, 0.22, 0.09]} /><meshStandardMaterial color={trim} /></mesh>
       ))}
       {/* Rodapé da divisória z=3.55: 4 trechos (sem cruzamento de coluna nessa linha). */}
       {[
-        [-7.175, 1.55], [-2.625, 2.95], [2.625, 2.95], [7.175, 1.55],
+        [-7.025, 1.85], [-2.625, 3.55], [2.625, 3.55], [7.025, 1.85],
       ].map(([x, w]) => (
         <mesh key={`row2-${x}`} position={[x, 0.18, 3.55]}><boxGeometry args={[w, 0.22, 0.09]} /><meshStandardMaterial color={trim} /></mesh>
       ))}
@@ -789,44 +789,45 @@ const Dollhouse = memo(function Dollhouse({ mode, lowPower, garden }: { mode: Vi
       <FrontFacade />
 
       {/* Divisorias de coluna (SALA|JANTAR|COZINHA e os dois QUARTOs|BANHEIRO).
-          Trecho de tras fica igual; trecho da frente foi esticado ate z=3.47
-          pra fechar o vao que sobrava entre os dois quartos (nao tinha parede
-          nem porta ali antes). */}
-      <Wall position={[-2.55, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} />
-      <Wall position={[-2.55, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} />
+          O vao dessa porta ROTACIONADA fica em z (nao em x): fazendo a conta
+          da rotacao, os postes do batente caem em z=-0.23 e z=-1.67 — entao
+          o vao certo pra parede encostar flush no batente e z∈[-1.75,-0.15],
+          centralizado no z=-0.95 da propria porta (mesma folga das portas
+          retas abaixo). Os dois trechos esticam ate encostar nesse vao. */}
+      <Wall position={[-2.55, 1.45, -3.1875]} size={[0.16, 2.9, 2.875]} />
+      <Wall position={[-2.55, 1.45, 1.66]} size={[0.16, 2.9, 3.62]} />
       <Doorway x={-2.55} z={-0.95} rotation={Math.PI / 2} />
-      <Wall position={[2.55, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} />
-      <Wall position={[2.55, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} />
+      <Wall position={[2.55, 1.45, -3.1875]} size={[0.16, 2.9, 2.875]} />
+      <Wall position={[2.55, 1.45, 1.66]} size={[0.16, 2.9, 3.62]} />
       <Doorway x={2.55} z={-0.95} rotation={Math.PI / 2} />
 
-      {/* Divisoria de linha z=-0.95 (frente|fundo): antes cada trecho de 2.4
-          ficava centralizado no MEIO do proprio comodo com uma porta pintada
-          por cima (porta decorativa dentro de parede solida) — os buracos de
-          passagem de verdade eram os vaos abertos do lado, sem parede nem
-          porta nenhuma. Agora a parede cobre a linha inteira (16m) com um vao
-          real de 2.2 em cada porta, do mesmo jeito que a divisoria de coluna
-          acima ja fazia certo, mais dois "cruzamentos" abertos em x=-2.55/2.55
-          pra nao tampar as portas rotacionadas logo acima. */}
-      <Wall position={[-7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} />
+      {/* Divisoria de linha z=-0.95 (frente|fundo). O vao de cada porta e
+          calibrado pra encostar exatamente na face externa dos postes do
+          batente (halfWidth 0.72 + meia espessura do poste 0.065 = 0.785,
+          arredondado pra 0.8 de folga minima) — vao total 1.6, nao 2.2 como
+          antes (que deixava um "degrau" vazio entre a parede e o batente).
+          Os cruzamentos das portas rotacionadas acima tambem usam vao 1.6,
+          pela mesma razao. */}
+      <Wall position={[-7.025, 1.45, -0.95]} size={[1.95, 2.9, 0.16]} />
       <Doorway x={-5.25} z={-0.95} />
-      <Wall position={[-3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
-      <Wall position={[-1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
+      <Wall position={[-3.9, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
+      <Wall position={[-1.275, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
       <Doorway x={0} z={-0.95} />
-      <Wall position={[1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
-      <Wall position={[3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
+      <Wall position={[1.275, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} />
+      <Wall position={[3.9, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} />
       <Doorway x={5.25} z={-0.95} />
-      <Wall position={[7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} />
+      <Wall position={[7.025, 1.45, -0.95]} size={[1.95, 2.9, 0.16]} />
 
-      {/* Divisoria de linha z=3.55 (fundo|ESTUDO-ENTRADA-CONVIVENCIA): essa
-          fileira nao tem divisoria de coluna (espaco aberto de proposito
-          entre ESTUDO/ENTRADA/CONVIVENCIA), entao nao precisa de cruzamento. */}
-      <Wall position={[-7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} />
+      {/* Divisoria de linha z=3.55 (fundo|ESTUDO-ENTRADA-CONVIVENCIA): mesma
+          calibragem de vao (1.6), sem cruzamento (fileira sem divisoria de
+          coluna, espaco aberto de proposito entre ESTUDO/ENTRADA/CONVIVENCIA). */}
+      <Wall position={[-7.025, 1.45, 3.55]} size={[1.95, 2.9, 0.16]} />
       <Doorway x={-5.25} z={3.55} />
-      <Wall position={[-2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} />
+      <Wall position={[-2.625, 1.45, 3.55]} size={[3.65, 2.9, 0.16]} />
       <Doorway x={0} z={3.55} />
-      <Wall position={[2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} />
+      <Wall position={[2.625, 1.45, 3.55]} size={[3.65, 2.9, 0.16]} />
       <Doorway x={5.25} z={3.55} />
-      <Wall position={[7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} />
+      <Wall position={[7.025, 1.45, 3.55]} size={[1.95, 2.9, 0.16]} />
 
       <Window position={[-5.1, 1.65, -5.88]} />
       <Window position={[0, 1.65, -5.88]} />
@@ -870,22 +871,22 @@ function LiteDollhouse({ mode, garden }: { mode: ViewMode; garden: GardenStyle }
       <LiteBox position={[-8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
       <LiteBox position={[8, 1.45, 0.06]} size={[0.18, 2.9, 12.12]} color="#f0d8bd" />
       {[-2.55, 2.55].flatMap((x) => [
-        <LiteBox key={`${x}-back`} position={[x, 1.45, -3.5]} size={[0.16, 2.9, 2.25]} color="#f7f0e5" />,
-        <LiteBox key={`${x}-front`} position={[x, 1.45, 1.835]} size={[0.16, 2.9, 3.27]} color="#f7f0e5" />,
+        <LiteBox key={`${x}-back`} position={[x, 1.45, -3.1875]} size={[0.16, 2.9, 2.875]} color="#f7f0e5" />,
+        <LiteBox key={`${x}-front`} position={[x, 1.45, 1.66]} size={[0.16, 2.9, 3.62]} color="#f7f0e5" />,
       ])}
       {/* Mesmo layout de paredes/vãos da versão detalhada (ver Dollhouse) —
           sem folha de porta desenhada aqui (estilo "lite"), mas os vãos
           precisam ficar nos mesmos lugares reais. */}
-      <LiteBox position={[-7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[-3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[-1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[1.575, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[3.6, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[7.175, 1.45, -0.95]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[-7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[-2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[2.625, 1.45, 3.55]} size={[3.05, 2.9, 0.16]} color="#f7f0e5" />
-      <LiteBox position={[7.175, 1.45, 3.55]} size={[1.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-7.025, 1.45, -0.95]} size={[1.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-3.9, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-1.275, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[1.275, 1.45, -0.95]} size={[0.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[3.9, 1.45, -0.95]} size={[1.1, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[7.025, 1.45, -0.95]} size={[1.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-7.025, 1.45, 3.55]} size={[1.95, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[-2.625, 1.45, 3.55]} size={[3.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[2.625, 1.45, 3.55]} size={[3.65, 2.9, 0.16]} color="#f7f0e5" />
+      <LiteBox position={[7.025, 1.45, 3.55]} size={[1.95, 2.9, 0.16]} color="#f7f0e5" />
       <LiteFacade mode={mode} />
       <LiteBox position={[-5.1, 0.48, -4.2]} size={[2.3, 0.8, 0.85]} color="#b95f52" />
       <LiteBox position={[0, 0.48, -3.45]} size={[2.1, 0.8, 1.05]} color="#bd8a5c" />
@@ -999,13 +1000,13 @@ const wall = (minX: number, maxX: number, minZ: number, maxZ: number): Collider 
 const HOUSE_COLLIDERS: readonly Collider[] = [
   wall(-8.1, 8.1, -6.1, -5.9), wall(-8.1, -7.9, -6, 6.12), wall(7.9, 8.1, -6, 6.12),
   wall(-8.1, -1.08, 5.9, 6.4), wall(1.08, 8.1, 5.9, 6.4),
-  wall(-2.63, -2.47, -6, -1.73), wall(-2.63, -2.47, -0.17, 3.5),
-  wall(2.47, 2.63, -6, -1.73), wall(2.47, 2.63, -0.17, 3.5),
-  wall(-8, -6.35, -1.03, -0.87), wall(-4.15, -3.05, -1.03, -0.87),
-  wall(-2.05, -1.1, -1.03, -0.87), wall(1.1, 2.05, -1.03, -0.87),
-  wall(3.05, 4.15, -1.03, -0.87), wall(6.35, 8, -1.03, -0.87),
-  wall(-8, -6.35, 3.47, 3.63), wall(-4.15, -1.1, 3.47, 3.63),
-  wall(1.1, 4.15, 3.47, 3.63), wall(6.35, 8, 3.47, 3.63),
+  wall(-2.63, -2.47, -6, -1.75), wall(-2.63, -2.47, -0.15, 3.5),
+  wall(2.47, 2.63, -6, -1.75), wall(2.47, 2.63, -0.15, 3.5),
+  wall(-8, -6.05, -1.03, -0.87), wall(-4.45, -3.35, -1.03, -0.87),
+  wall(-1.75, -0.8, -1.03, -0.87), wall(0.8, 1.75, -1.03, -0.87),
+  wall(3.35, 4.45, -1.03, -0.87), wall(6.05, 8, -1.03, -0.87),
+  wall(-8, -6.05, 3.47, 3.63), wall(-4.45, -0.8, 3.47, 3.63),
+  wall(0.8, 4.45, 3.47, 3.63), wall(6.05, 8, 3.47, 3.63),
 ] as const;
 
 const isPassage = (x: number, z: number) => {
@@ -1017,19 +1018,59 @@ const isPassage = (x: number, z: number) => {
   return true;
 };
 
-function WalkCamera({ navigation, resetSignal, enabled, remoteCamera, onCamera }: {
+function WalkCamera({ navigation, resetSignal, enabled, remoteCamera, onCamera, onLockChange }: {
   navigation: MutableRefObject<NavigationInput>;
   resetSignal: number;
   enabled: boolean;
   remoteCamera?: MutableRefObject<CasaCamera | null>;
   onCamera?: (camera: CasaCameraUpdate) => void;
+  onLockChange?: (locked: boolean) => void;
 }) {
 
-  const { camera, invalidate } = useThree();
+  const { camera, invalidate, gl } = useThree();
   const keys = useRef(new Set<string>());
   const position = useRef(new THREE.Vector3(ENTRANCE_CAMERA.x, ENTRANCE_CAMERA.y, ENTRANCE_CAMERA.z));
   const yaw = useRef(ENTRANCE_CAMERA.yaw);
   const pitch = useRef(ENTRANCE_CAMERA.pitch);
+  const locked = useRef(false);
+
+  // Câmera livre estilo FPS/Roblox: com o ponteiro travado (Pointer Lock API),
+  // mover o mouse gira a câmera direto, sem precisar clicar e arrastar — usa
+  // movementX/Y (delta real do SO), não a posição do cursor na tela, então
+  // não trava na borda da janela nem soma erro. Só se aplica a mouse; em
+  // toque, o arrastar-pra-olhar do plano invisível (mais abaixo) continua
+  // funcionando normalmente (Pointer Lock não existe em toque).
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const onLockChangeEvent = () => {
+      locked.current = document.pointerLockElement === canvas;
+      onLockChange?.(locked.current);
+    };
+    const onMouseMove = (event: MouseEvent) => {
+      if (!locked.current || !enabled) return;
+      navigation.current.lookX += event.movementX;
+      navigation.current.lookY += event.movementY;
+      navigation.current.localInput = performance.now();
+    };
+    const onCanvasClick = () => {
+      // Só em mouse de verdade — em toque (coarse pointer) o Pointer Lock
+      // não se aplica, o arrastar-pra-olhar do plano invisível já cobre isso.
+      if (window.matchMedia("(pointer: coarse)").matches) return;
+      if (!locked.current) canvas.requestPointerLock?.();
+    };
+
+    document.addEventListener("pointerlockchange", onLockChangeEvent);
+    document.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("click", onCanvasClick);
+    return () => {
+      document.removeEventListener("pointerlockchange", onLockChangeEvent);
+      document.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("click", onCanvasClick);
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      onLockChange?.(false);
+    };
+  }, [gl, navigation, onLockChange, enabled]);
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
@@ -1318,12 +1359,13 @@ function MoveMarker({ navigation }: { navigation: MutableRefObject<NavigationInp
   );
 }
 
-function Scene({ props, mode, navigation, resetSignal, garden }: {
+function Scene({ props, mode, navigation, resetSignal, garden, onLockChange }: {
   props: SceneProps;
   mode: ViewMode;
   navigation: MutableRefObject<NavigationInput>;
   resetSignal: number;
   garden: GardenStyle;
+  onLockChange?: (locked: boolean) => void;
 }) {
 
   const drag = useRef<DragState>(null);
@@ -1333,8 +1375,15 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
   const characterMap = useMemo(() => new Map(props.characters.map((character) => [character.id, character])), [props.characters]);
   const lastMoveAt = useRef(0);
   const pendingMove = useRef<{ drag: Exclude<DragState, null>; x: number; y: number } | null>(null);
-  const { invalidate } = useThree();
+  const { invalidate, camera } = useThree();
   const scenePointer = useRef<{ id: number; startX: number; startY: number; lastX: number; lastY: number; moved: boolean } | null>(null);
+  const pointerLockedRef = useRef(false);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const centerNDC = useMemo(() => new THREE.Vector2(0, 0), []);
+  const handleLockChange = useCallback((locked: boolean) => {
+    pointerLockedRef.current = locked;
+    onLockChange?.(locked);
+  }, [onLockChange]);
 
   const commitMove = useCallback((current: Exclude<DragState, null>, x: number, y: number) => {
     if (current.kind === "item") props.onMoveItem(current.id, x, y);
@@ -1393,7 +1442,7 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
       <directionalLight position={[6, 6, -9]} intensity={props.mood === "noite" ? 0.35 : 0.6} color="#ffd9b0" />
 
       {mode === "walk" ? (
-        <WalkCamera navigation={navigation} resetSignal={resetSignal} enabled={controlsEnabled} remoteCamera={props.remoteCamera} onCamera={props.onCamera} />
+        <WalkCamera navigation={navigation} resetSignal={resetSignal} enabled={controlsEnabled} remoteCamera={props.remoteCamera} onCamera={props.onCamera} onLockChange={handleLockChange} />
       ) : (
         <OverviewCamera />
       )}
@@ -1441,8 +1490,17 @@ function Scene({ props, mode, navigation, resetSignal, garden }: {
             const pointer = scenePointer.current;
             if (!pointer || pointer.id !== event.pointerId) return;
             if (!pointer.moved) {
-              navigation.current.targetX = THREE.MathUtils.clamp(event.point.x, -7.6, 7.6);
-              navigation.current.targetZ = THREE.MathUtils.clamp(event.point.z, SCENE_Z_MIN, SCENE_Z_MAX);
+              // Com o ponteiro travado (Pointer Lock), o cursor real some e fica
+              // escondido/travado — usar a posição do clique na tela (event.point)
+              // deixaria de mirar onde a câmera realmente olha. Nesse caso, mira
+              // com um raio do centro da tela (o "retículo" implícito da câmera).
+              let targetPoint = event.point;
+              if (pointerLockedRef.current) {
+                raycaster.setFromCamera(centerNDC, camera);
+                if (raycaster.ray.intersectPlane(groundPlane, point)) targetPoint = point;
+              }
+              navigation.current.targetX = THREE.MathUtils.clamp(targetPoint.x, -7.6, 7.6);
+              navigation.current.targetZ = THREE.MathUtils.clamp(targetPoint.z, SCENE_Z_MIN, SCENE_Z_MAX);
               navigation.current.moving = true;
               navigation.current.localInput = performance.now();
             }
@@ -1596,6 +1654,7 @@ export default function MinhaCasa3D(props: Props) {
   const [lowPower, setLowPower] = useState(true);
   const [dpr, setDpr] = useState(0.75);
   const [mode, setMode] = useState<ViewMode>("walk");
+  const [pointerLocked, setPointerLocked] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
   const [localGarden, setLocalGarden] = useState<GardenStyle>("florido");
   const garden = props.garden ?? localGarden;
@@ -1654,8 +1713,16 @@ export default function MinhaCasa3D(props: Props) {
               if (inclineStreak.current >= 2) setLowPower(false);
             }}
           />
-          <Scene props={{ ...props, lowPower }} mode={mode} navigation={navigation} resetSignal={resetSignal} garden={garden} />
+          <Scene props={{ ...props, lowPower }} mode={mode} navigation={navigation} resetSignal={resetSignal} garden={garden} onLockChange={setPointerLocked} />
         </Canvas>
+
+        {mode === "walk" && !pointerLocked && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+            <div className="rounded-full bg-foreground/70 px-4 py-2 text-xs font-medium text-background backdrop-blur-sm">
+              Clique na casa pra olhar ao redor com o mouse
+            </div>
+          </div>
+        )}
 
         <div className="absolute right-3 top-3 z-20 flex gap-1 rounded-full bg-card/85 p-1 shadow-lg backdrop-blur-sm">
           {([["florido", "Florido"], ["sereno", "Sereno"], ["outono", "Outono"]] as [GardenStyle, string][]).map(([value, label]) => (
