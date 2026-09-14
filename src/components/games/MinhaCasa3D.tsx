@@ -1034,12 +1034,15 @@ function WalkCamera({ navigation, resetSignal, enabled, remoteCamera, onCamera, 
   const pitch = useRef(ENTRANCE_CAMERA.pitch);
   const locked = useRef(false);
 
-  // Câmera livre estilo FPS/Roblox: com o ponteiro travado (Pointer Lock API),
-  // mover o mouse gira a câmera direto, sem precisar clicar e arrastar — usa
-  // movementX/Y (delta real do SO), não a posição do cursor na tela, então
-  // não trava na borda da janela nem soma erro. Só se aplica a mouse; em
-  // toque, o arrastar-pra-olhar do plano invisível (mais abaixo) continua
-  // funcionando normalmente (Pointer Lock não existe em toque).
+  // Câmera livre estilo FPS, mas só ENQUANTO o botão do mouse está pressionado
+  // (clicar e segurar pra olhar ao redor, soltar devolve o cursor na hora).
+  // Travar o cursor pro jogo inteiro (só soltando com ESC) escondia o mouse
+  // da tela inteira, inclusive fora do canvas — impedindo clicar na lista de
+  // pessoas na lateral. Com trava só durante o "segurar", o cursor nunca fica
+  // escondido parado. Usa movementX/Y (delta real do SO) em vez da posição do
+  // cursor na tela, então não trava na borda da janela nem soma erro. Só se
+  // aplica a mouse; em toque, o arrastar-pra-olhar do plano invisível (mais
+  // abaixo) continua funcionando normalmente (Pointer Lock não existe em toque).
   useEffect(() => {
     const canvas = gl.domElement;
 
@@ -1053,20 +1056,25 @@ function WalkCamera({ navigation, resetSignal, enabled, remoteCamera, onCamera, 
       navigation.current.lookY += event.movementY;
       navigation.current.localInput = performance.now();
     };
-    const onCanvasClick = () => {
+    const onCanvasMouseDown = () => {
       // Só em mouse de verdade — em toque (coarse pointer) o Pointer Lock
       // não se aplica, o arrastar-pra-olhar do plano invisível já cobre isso.
       if (window.matchMedia("(pointer: coarse)").matches) return;
       if (!locked.current) canvas.requestPointerLock?.();
     };
+    const onDocumentMouseUp = () => {
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    };
 
     document.addEventListener("pointerlockchange", onLockChangeEvent);
     document.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("click", onCanvasClick);
+    canvas.addEventListener("mousedown", onCanvasMouseDown);
+    document.addEventListener("mouseup", onDocumentMouseUp);
     return () => {
       document.removeEventListener("pointerlockchange", onLockChangeEvent);
       document.removeEventListener("mousemove", onMouseMove);
-      canvas.removeEventListener("click", onCanvasClick);
+      canvas.removeEventListener("mousedown", onCanvasMouseDown);
+      document.removeEventListener("mouseup", onDocumentMouseUp);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
       onLockChange?.(false);
     };
@@ -1376,7 +1384,7 @@ function Scene({ props, mode, navigation, resetSignal, garden, onLockChange }: {
   const lastMoveAt = useRef(0);
   const pendingMove = useRef<{ drag: Exclude<DragState, null>; x: number; y: number } | null>(null);
   const { invalidate, camera } = useThree();
-  const scenePointer = useRef<{ id: number; startX: number; startY: number; lastX: number; lastY: number; moved: boolean } | null>(null);
+  const scenePointer = useRef<{ id: number; startX: number; startY: number; lastX: number; lastY: number; moved: boolean; startLookX: number; startLookY: number } | null>(null);
   const pointerLockedRef = useRef(false);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const centerNDC = useMemo(() => new THREE.Vector2(0, 0), []);
@@ -1468,18 +1476,26 @@ function Scene({ props, mode, navigation, resetSignal, garden, onLockChange }: {
           onPointerDown={(event) => {
             props.onSelect(null);
             navigation.current.moving = false;
-            scenePointer.current = { id: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, moved: false };
+            scenePointer.current = {
+              id: event.pointerId, startX: event.clientX, startY: event.clientY,
+              lastX: event.clientX, lastY: event.clientY, moved: false,
+              startLookX: navigation.current.lookX, startLookY: navigation.current.lookY,
+            };
             (event.target as Element).setPointerCapture?.(event.pointerId);
           }}
           onPointerMove={(event) => {
             const pointer = scenePointer.current;
             if (!pointer || pointer.id !== event.pointerId) return;
+            // Com o ponteiro travado (Pointer Lock), clientX/Y ficam congelados
+            // (o SO não reporta posição absoluta) — a rotação de verdade já é
+            // feita pelo listener de movementX/Y no WalkCamera; aqui só cuidamos
+            // do caso sem trava (toque, ou mouse antes da trava ativar).
             const dx = event.clientX - pointer.lastX;
             const dy = event.clientY - pointer.lastY;
             pointer.lastX = event.clientX;
             pointer.lastY = event.clientY;
             if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 7) pointer.moved = true;
-            if (pointer.moved) {
+            if (pointer.moved && !pointerLockedRef.current) {
               navigation.current.lookX += dx;
               navigation.current.lookY += dy;
               navigation.current.localInput = performance.now();
@@ -1489,7 +1505,14 @@ function Scene({ props, mode, navigation, resetSignal, garden, onLockChange }: {
           onPointerUp={(event) => {
             const pointer = scenePointer.current;
             if (!pointer || pointer.id !== event.pointerId) return;
-            if (!pointer.moved) {
+            // Com trava ativa, clientX/Y não refletem se o usuário girou a
+            // câmera — usar a variação real de lookX/lookY (movementX/Y
+            // acumulado) pra decidir se foi "olhar ao redor" ou clique-pra-andar.
+            const lookDelta = Math.hypot(
+              navigation.current.lookX - pointer.startLookX,
+              navigation.current.lookY - pointer.startLookY,
+            );
+            if (!pointer.moved && lookDelta < 6) {
               // Com o ponteiro travado (Pointer Lock), o cursor real some e fica
               // escondido/travado — usar a posição do clique na tela (event.point)
               // deixaria de mirar onde a câmera realmente olha. Nesse caso, mira
@@ -1719,7 +1742,7 @@ export default function MinhaCasa3D(props: Props) {
         {mode === "walk" && !pointerLocked && (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
             <div className="rounded-full bg-foreground/70 px-4 py-2 text-xs font-medium text-background backdrop-blur-sm">
-              Clique na casa pra olhar ao redor com o mouse
+              Clique e segure na casa pra olhar ao redor com o mouse
             </div>
           </div>
         )}
