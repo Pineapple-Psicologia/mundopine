@@ -100,3 +100,19 @@
   50%      { transform: translateY(-8px) rotate(2deg); }
 }
 .animate-avatar-bob { animation: avatar-bob 3.2s ease-in-out infinite; }
+
+@keyframes landing-blob {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50%      { transform: rotate(12deg) scale(1.04); }
+}
+.animate-landing-blob { animation: landing-blob 9s ease-in-out infinite; }
+
+@keyframes landing-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-landing-marquee { animation: landing-marquee 60s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-blob, .animate-landing-marquee { animation: none; }
+}

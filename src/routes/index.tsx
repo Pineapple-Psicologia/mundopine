@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Heart, Users, Lock, LogOut, Shield } from "lucide-react";
+import { Sparkles, Heart, Users, Lock, LogOut, Shield, Globe } from "lucide-react";
 import { GAMES, type GameId } from "@/lib/games";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +65,9 @@ function Home() {
     <main className="min-h-screen px-4 py-10 md:py-14">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-end gap-2 mb-6">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/landing"><Globe className="w-4 h-4 mr-1" /> Landing page</Link>
+          </Button>
           {isAdmin && (
             <Button asChild variant="outline" size="sm">
               <Link to="/admin"><Shield className="w-4 h-4 mr-1" /> Admin</Link>

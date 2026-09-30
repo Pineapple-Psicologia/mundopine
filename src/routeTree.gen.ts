@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SalaCodeRouteImport } from './routes/sala.$code'
 import { Route as ApiPublicLentesSfxRouteImport } from './routes/api/public/lentes-sfx'
 
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
+  '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
+  '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
+  '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/reset-password'
     | '/termos'
+    | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/reset-password'
     | '/termos'
+    | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/reset-password'
     | '/termos'
+    | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
   fileRoutesById: FileRoutesById
@@ -156,12 +168,20 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermosRoute: typeof TermosRoute
+  LandingRoute: typeof LandingRoute
   SalaCodeRoute: typeof SalaCodeRoute
   ApiPublicLentesSfxRoute: typeof ApiPublicLentesSfxRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/termos': {
       id: '/termos'
       path: '/termos'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TermosRoute: TermosRoute,
+  LandingRoute: LandingRoute,
   SalaCodeRoute: SalaCodeRoute,
   ApiPublicLentesSfxRoute: ApiPublicLentesSfxRoute,
 }
