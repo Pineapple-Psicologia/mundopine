@@ -91,7 +91,7 @@ function Home() {
             <Sparkles className="w-3.5 h-3.5" /> Estante de jogos terapêuticos
           </div>
           <h1 className="text-4xl md:text-5xl font-bold leading-[1.05] text-foreground">
-            Brincar é <span className="text-primary">linguagem clínica.</span>
+            Brincar é <span className="text-primary">Linguagem Clínica.</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0">
             Plataforma exclusiva para psicólogas. Pacientes acessam apenas pelo
