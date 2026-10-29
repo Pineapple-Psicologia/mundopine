@@ -398,10 +398,18 @@ export default function Whiteboard({ room, role = "paciente" }: { room: ReturnTy
     room.send("wb:request", {});
     return room.on((m: RoomMessage) => {
       if (m.type === "wb:request") {
-        room.send("wb:snapshot", { objects: objectsRef.current, bg, locked });
+        // Quem acabou de abrir a tela (quadro vazio) não responde, para não
+        // apagar o desenho de quem já estava na sala.
+        if (objectsRef.current.length > 0 || isPsi) {
+          room.send("wb:snapshot", { objects: objectsRef.current, bg, locked });
+        }
       } else if (m.type === "wb:snapshot") {
         if (Array.isArray(m.payload?.objects)) {
-          objectsRef.current = m.payload.objects;
+          // Junta os traços pelo id em vez de substituir: nada desenhado
+          // localmente se perde quando chega a cópia do outro lado.
+          const known = new Set(objectsRef.current.map((o: any) => o?.id));
+          const incoming = (m.payload.objects as any[]).filter((o) => o && !known.has(o.id));
+          objectsRef.current = [...objectsRef.current, ...incoming];
           if (m.payload.bg) setBg(m.payload.bg);
           if (typeof m.payload.locked === "boolean" && !isPsi) setLocked(m.payload.locked);
           redraw();

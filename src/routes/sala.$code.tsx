@@ -138,7 +138,7 @@ function SalaPage() {
           )}
           <div className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${room.peers > 1 ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
             {room.peers > 1 ? <Wifi className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <WifiOff className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-            <span className="hidden sm:inline">{room.peers > 1 ? "Conectados" : "Aguardando..."}</span>
+            <span className="hidden sm:inline">{room.status !== "online" ? (room.status === "reconnecting" ? "Reconectando..." : "Conectando...") : room.peers > 1 ? "Conectados" : role === "psi" ? "Aguardando paciente..." : "Aguardando psicóloga..."}</span>
           </div>
         </div>
       </header>
