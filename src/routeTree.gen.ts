@@ -20,6 +20,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SalaCodeRouteImport } from './routes/sala.$code'
 import { Route as ApiPublicLentesSfxRouteImport } from './routes/api/public/lentes-sfx'
+import { Route as ApiSalaCodeRouteImport } from './routes/api/sala.$code'
 
 const LandingRoute = LandingRouteImport.update({
   id: '/landing',
@@ -71,6 +72,11 @@ const SalaCodeRoute = SalaCodeRouteImport.update({
   path: '/sala/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSalaCodeRoute = ApiSalaCodeRouteImport.update({
+  id: '/api/sala/$code',
+  path: '/api/sala/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicLentesSfxRoute = ApiPublicLentesSfxRouteImport.update({
   id: '/api/public/lentes-sfx',
   path: '/api/public/lentes-sfx',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
+  '/api/sala/$code': typeof ApiSalaCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
+  '/api/sala/$code': typeof ApiSalaCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/landing': typeof LandingRoute
   '/sala/$code': typeof SalaCodeRoute
   '/api/public/lentes-sfx': typeof ApiPublicLentesSfxRoute
+  '/api/sala/$code': typeof ApiSalaCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
+    | '/api/sala/$code'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
+    | '/api/sala/$code'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/landing'
     | '/sala/$code'
     | '/api/public/lentes-sfx'
+    | '/api/sala/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,10 +183,18 @@ export interface RootRouteChildren {
   LandingRoute: typeof LandingRoute
   SalaCodeRoute: typeof SalaCodeRoute
   ApiPublicLentesSfxRoute: typeof ApiPublicLentesSfxRoute
+  ApiSalaCodeRoute: typeof ApiSalaCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/api/sala/$code': {
+      id: '/api/sala/$code'
+      path: '/api/sala/$code'
+      fullPath: '/api/sala/$code'
+      preLoaderRoute: typeof ApiSalaCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/landing': {
       id: '/landing'
       path: '/landing'
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   LandingRoute: LandingRoute,
   SalaCodeRoute: SalaCodeRoute,
   ApiPublicLentesSfxRoute: ApiPublicLentesSfxRoute,
+  ApiSalaCodeRoute: ApiSalaCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

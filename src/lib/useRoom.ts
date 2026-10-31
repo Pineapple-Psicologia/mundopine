@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type Role = "psi" | "paciente";
 
@@ -9,13 +7,18 @@ export type RoomMessage = { type: string; payload: any; from: Role };
 export type RoomStatus = "connecting" | "online" | "reconnecting";
 
 /**
- * Sala em tempo real (Supabase Realtime) compartilhada entre psicóloga e paciente.
+ * Sala em tempo real compartilhada entre psicóloga e paciente.
+ *
+ * O canal é servido pelo próprio app (src/routes/api/sala.$code.ts): a página
+ * recebe as mensagens por um stream SSE (EventSource) e envia por POST. Não
+ * depende do Supabase Realtime.
  *
  * Garantias:
- * - Reconecta sozinha se a conexão cair (celular bloqueado, Wi‑Fi oscilando,
- *   aba em segundo plano) e ao voltar para a aba / voltar a internet.
+ * - Reconecta sozinha se a conexão cair (o EventSource tenta de novo e, se
+ *   desistir, abrimos outro) e ao voltar para a aba / voltar a internet.
+ * - Mensagens saem na ordem em que foram enviadas (fila com envio em lote).
  * - Pedidos de sincronização ("*:request") enviados antes da conexão ficar
- *   pronta não se perdem: ficam na fila e saem assim que conectar.
+ *   pronta não se perdem: ficam guardados e saem assim que conectar.
  * - Quem já estava na sala reenvia o estado atual de cada jogo ("*:state")
  *   quando alguém novo entra — assim o paciente que abre o link depois vê o
  *   que a psicóloga já fez (e vice‑versa, se a psicóloga recarregar a página).
@@ -25,15 +28,13 @@ export type RoomStatus = "connecting" | "online" | "reconnecting";
  *   aparece quando há de fato duas telas na sala.
  */
 const JOIN_GRACE_MS = 1500;
-// Se o próprio Supabase não conseguir reentrar no canal neste tempo,
-// descartamos o canal e abrimos um novo do zero.
-const STUCK_TIMEOUT_MS = 15_000;
+const RECONNECT_MS = 2000;
 
 const isStateType = (t: string) => t.endsWith(":state");
 const isRequestType = (t: string) => t.endsWith(":request");
 
 function newTabId() {
-  return Math.random().toString(36).slice(2, 10);
+  return Math.random().toString(36).slice(2, 12).padEnd(8, "0");
 }
 
 export function useRoom(code: string | null, role: Role) {
@@ -41,10 +42,15 @@ export function useRoom(code: string | null, role: Role) {
   const [peers, setPeers] = useState(0);
   const [status, setStatus] = useState<RoomStatus>("connecting");
 
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const subscribedRef = useRef(false);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  const connectedRef = useRef(false);
   const handlersRef = useRef<Set<(m: RoomMessage) => void>>(new Set());
   const tabIdRef = useRef<string>(newTabId());
+
+  // Fila de envio: um POST por vez, levando tudo o que acumulou.
+  const outboxRef = useRef<{ type: string; payload: any }[]>([]);
+  const sendingRef = useRef(false);
 
   // Último estado conhecido de cada jogo (enviado ou recebido).
   const stateCacheRef = useRef<Map<string, any>>(new Map());
@@ -62,29 +68,57 @@ export function useRoom(code: string | null, role: Role) {
     });
   }, []);
 
+  const flush = useCallback(async () => {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
+    try {
+      while (outboxRef.current.length > 0) {
+        const roomCode = codeRef.current;
+        if (!roomCode) {
+          outboxRef.current = [];
+          break;
+        }
+        const batch = outboxRef.current;
+        outboxRef.current = [];
+        try {
+          const res = await fetch(`/api/sala/${encodeURIComponent(roomCode)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client: tabIdRef.current, from: role, messages: batch }),
+          });
+          if (!res.ok) console.warn("[Sala] envio recusado", res.status);
+        } catch (err) {
+          // Sem rede: devolve o lote para a fila e tenta de novo em instantes.
+          console.warn("[Sala] falha ao enviar", err);
+          outboxRef.current = [...batch, ...outboxRef.current];
+          await new Promise((r) => setTimeout(r, 1000));
+          if (!connectedRef.current) break;
+        }
+      }
+    } finally {
+      sendingRef.current = false;
+    }
+  }, [role]);
+
   const rawSend = useCallback(
     (type: string, payload: any) => {
-      const ch = channelRef.current;
-      if (!ch || !subscribedRef.current) return false;
-      void ch.send({
-        type: "broadcast",
-        event: "msg",
-        payload: { type, payload, from: role } as RoomMessage,
-      });
+      if (!connectedRef.current) return false;
+      outboxRef.current.push({ type, payload });
+      void flush();
       return true;
     },
-    [role],
+    [flush],
   );
 
   useEffect(() => {
     if (!code) return;
 
     let disposed = false;
-    let stuckTimer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let rebroadcastTimer: ReturnType<typeof setTimeout> | null = null;
 
     const myKey = `${role}:${tabIdRef.current}`;
-    const topic = `room:${code}`;
 
     const rebroadcastStates = () => {
       if (rebroadcastTimer) clearTimeout(rebroadcastTimer);
@@ -94,119 +128,79 @@ export function useRoom(code: string | null, role: Role) {
       }, 400);
     };
 
-    const clearStuckTimer = () => {
-      if (stuckTimer) clearTimeout(stuckTimer);
-      stuckTimer = null;
-    };
-
-    // Enquanto não estiver conectado, vigia: se demorar demais, recomeça.
-    const armStuckTimer = () => {
-      if (stuckTimer || disposed) return;
-      stuckTimer = setTimeout(() => {
-        stuckTimer = null;
-        if (!disposed && !subscribedRef.current) connect();
-      }, STUCK_TIMEOUT_MS);
-    };
-
-    // O cliente do Supabase devolve o canal existente quando se pede outro
-    // com o mesmo nome. Por isso o canal antigo precisa sair da lista dele na
-    // hora — sem esperar resposta do servidor — senão o "novo" canal seria o
-    // antigo, que nunca mais avisa que conectou (sala presa em Reconectando).
-    const dropChannel = (ch: RealtimeChannel) => {
-      try {
-        void ch.unsubscribe();
-      } catch {
-        /* canal já fechado */
-      }
-      try {
-        ch.teardown();
-      } catch {
-        /* idem */
-      }
-      (supabase.realtime as any)._remove?.(ch);
-    };
-
-    const dropAll = () => {
-      const current = channelRef.current;
-      channelRef.current = null;
-      subscribedRef.current = false;
-      if (current) dropChannel(current);
-      supabase
-        .getChannels()
-        .filter((c) => c.topic === `realtime:${topic}`)
-        .forEach(dropChannel);
+    const markOffline = () => {
+      connectedRef.current = false;
+      setReady(false);
+      setStatus("reconnecting");
     };
 
     function connect() {
       if (disposed) return;
-      dropAll();
-      armStuckTimer();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      es?.close();
 
-      const ch = supabase.channel(topic, {
-        config: { broadcast: { self: false }, presence: { key: myKey } },
-      });
-      channelRef.current = ch;
+      const url = `/api/sala/${encodeURIComponent(code!)}?client=${tabIdRef.current}&role=${role}`;
+      const source = new EventSource(url);
+      es = source;
       let initialSyncDone = false;
 
-      ch.on("broadcast", { event: "msg" }, ({ payload }) => {
-        const m = payload as RoomMessage;
+      source.onopen = () => {
+        if (disposed || es !== source) return;
+        connectedRef.current = true;
+        graceUntilRef.current = Date.now() + JOIN_GRACE_MS;
+        setReady(true);
+        setStatus("online");
+        // Envia pedidos de sincronização que estavam esperando a conexão.
+        pendingRequestsRef.current.forEach((payload, type) => rawSend(type, payload));
+        void flush();
+      };
+
+      source.addEventListener("presence", (ev) => {
+        if (disposed || es !== source) return;
+        let data: { keys?: string[]; joined?: string };
+        try {
+          data = JSON.parse((ev as MessageEvent).data);
+        } catch {
+          return;
+        }
+        setPeers(Array.isArray(data.keys) ? data.keys.length : 0);
+        // Só quem já estava na sala reenvia o estado para quem chegou agora.
+        if (initialSyncDone && data.joined && data.joined !== myKey) rebroadcastStates();
+        initialSyncDone = true;
+      });
+
+      source.addEventListener("msg", (ev) => {
+        if (disposed || es !== source) return;
+        let m: RoomMessage;
+        try {
+          m = JSON.parse((ev as MessageEvent).data);
+        } catch {
+          return;
+        }
         if (!m || typeof m.type !== "string") return;
         if (isStateType(m.type)) stateCacheRef.current.set(m.type, m.payload);
         deliver(m);
       });
 
-      ch.on("presence", { event: "sync" }, () => {
-        initialSyncDone = true;
-        setPeers(Object.keys(ch.presenceState()).length);
-      });
-
-      ch.on("presence", { event: "join" }, ({ key }) => {
-        // Só quem já estava na sala reenvia o estado para quem chegou agora.
-        if (initialSyncDone && key !== myKey) rebroadcastStates();
-      });
-
-      // Em CHANNEL_ERROR / TIMED_OUT o próprio Supabase tenta entrar de novo
-      // sozinho e chama este callback com SUBSCRIBED quando conseguir.
-      ch.subscribe(async (s, err) => {
-        if (disposed || channelRef.current !== ch) return;
-        if (s === "SUBSCRIBED") {
-          clearStuckTimer();
-          subscribedRef.current = true;
-          graceUntilRef.current = Date.now() + JOIN_GRACE_MS;
-          setReady(true);
-          setStatus("online");
-          try {
-            await ch.track({ role, tab: tabIdRef.current, at: Date.now() });
-          } catch (e) {
-            console.warn("[Sala] falha ao registrar presença", e);
-          }
-          // Envia pedidos de sincronização que estavam esperando a conexão.
-          pendingRequestsRef.current.forEach((payload, type) => rawSend(type, payload));
-        } else if (s === "CHANNEL_ERROR" || s === "TIMED_OUT") {
-          if (err) console.warn(`[Sala] conexão ${s}`, err);
-          subscribedRef.current = false;
-          setReady(false);
-          setStatus("reconnecting");
-          armStuckTimer();
-        } else if (s === "CLOSED") {
-          // Canal fechado sem a gente pedir: abre outro.
-          subscribedRef.current = false;
-          setReady(false);
-          setPeers(0);
-          setStatus("reconnecting");
-          setTimeout(() => {
-            if (!disposed && channelRef.current === ch) connect();
-          }, 1000);
+      source.onerror = () => {
+        if (disposed || es !== source) return;
+        markOffline();
+        // O navegador tenta reconectar sozinho; se desistiu, abrimos outro.
+        if (source.readyState === EventSource.CLOSED && !retryTimer) {
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            connect();
+          }, RECONNECT_MS);
         }
-      });
+      };
     }
 
     const wakeUp = () => {
       if (disposed) return;
-      if (document.visibilityState === "visible" && !subscribedRef.current) {
-        clearStuckTimer();
-        connect();
-      }
+      if (document.visibilityState === "visible" && !connectedRef.current) connect();
     };
 
     setStatus("connecting");
@@ -216,15 +210,17 @@ export function useRoom(code: string | null, role: Role) {
 
     return () => {
       disposed = true;
-      clearStuckTimer();
+      if (retryTimer) clearTimeout(retryTimer);
       if (rebroadcastTimer) clearTimeout(rebroadcastTimer);
       window.removeEventListener("online", wakeUp);
       document.removeEventListener("visibilitychange", wakeUp);
-      dropAll();
+      es?.close();
+      es = null;
+      connectedRef.current = false;
       setReady(false);
       setPeers(0);
     };
-  }, [code, role, deliver, rawSend]);
+  }, [code, role, deliver, rawSend, flush]);
 
   const send = useCallback(
     (type: string, payload: any) => {
