@@ -25,7 +25,9 @@ export type RoomStatus = "connecting" | "online" | "reconnecting";
  *   aparece quando há de fato duas telas na sala.
  */
 const JOIN_GRACE_MS = 1500;
-const MAX_BACKOFF_MS = 10_000;
+// Se o próprio Supabase não conseguir reentrar no canal neste tempo,
+// descartamos o canal e abrimos um novo do zero.
+const STUCK_TIMEOUT_MS = 15_000;
 
 const isStateType = (t: string) => t.endsWith(":state");
 const isRequestType = (t: string) => t.endsWith(":request");
@@ -78,12 +80,11 @@ export function useRoom(code: string | null, role: Role) {
     if (!code) return;
 
     let disposed = false;
-    let attempt = 0;
-    let generation = 0;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let stuckTimer: ReturnType<typeof setTimeout> | null = null;
     let rebroadcastTimer: ReturnType<typeof setTimeout> | null = null;
 
     const myKey = `${role}:${tabIdRef.current}`;
+    const topic = `room:${code}`;
 
     const rebroadcastStates = () => {
       if (rebroadcastTimer) clearTimeout(rebroadcastTimer);
@@ -93,40 +94,55 @@ export function useRoom(code: string | null, role: Role) {
       }, 400);
     };
 
-    const scheduleReconnect = () => {
-      if (disposed || retryTimer) return;
-      const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
-      attempt += 1;
-      setStatus("reconnecting");
-      retryTimer = setTimeout(() => {
-        retryTimer = null;
-        void connect();
-      }, delay);
+    const clearStuckTimer = () => {
+      if (stuckTimer) clearTimeout(stuckTimer);
+      stuckTimer = null;
     };
 
-    const teardown = async () => {
-      const ch = channelRef.current;
+    // Enquanto não estiver conectado, vigia: se demorar demais, recomeça.
+    const armStuckTimer = () => {
+      if (stuckTimer || disposed) return;
+      stuckTimer = setTimeout(() => {
+        stuckTimer = null;
+        if (!disposed && !subscribedRef.current) connect();
+      }, STUCK_TIMEOUT_MS);
+    };
+
+    // O cliente do Supabase devolve o canal existente quando se pede outro
+    // com o mesmo nome. Por isso o canal antigo precisa sair da lista dele na
+    // hora — sem esperar resposta do servidor — senão o "novo" canal seria o
+    // antigo, que nunca mais avisa que conectou (sala presa em Reconectando).
+    const dropChannel = (ch: RealtimeChannel) => {
+      try {
+        void ch.unsubscribe();
+      } catch {
+        /* canal já fechado */
+      }
+      try {
+        ch.teardown();
+      } catch {
+        /* idem */
+      }
+      (supabase.realtime as any)._remove?.(ch);
+    };
+
+    const dropAll = () => {
+      const current = channelRef.current;
       channelRef.current = null;
       subscribedRef.current = false;
-      if (ch) {
-        try {
-          // Remove o canal antigo por completo antes de abrir outro com o
-          // mesmo nome (senão o cliente pode devolver o canal que está fechando).
-          await supabase.removeChannel(ch);
-        } catch {
-          /* canal já fechado */
-        }
-      }
+      if (current) dropChannel(current);
+      supabase
+        .getChannels()
+        .filter((c) => c.topic === `realtime:${topic}`)
+        .forEach(dropChannel);
     };
 
-    async function connect() {
+    function connect() {
       if (disposed) return;
-      const myGen = ++generation;
-      await teardown();
-      // Outra tentativa de conexão começou enquanto esperávamos: ela vence.
-      if (disposed || myGen !== generation) return;
+      dropAll();
+      armStuckTimer();
 
-      const ch = supabase.channel(`room:${code}`, {
+      const ch = supabase.channel(topic, {
         config: { broadcast: { self: false }, presence: { key: myKey } },
       });
       channelRef.current = ch;
@@ -149,23 +165,38 @@ export function useRoom(code: string | null, role: Role) {
         if (initialSyncDone && key !== myKey) rebroadcastStates();
       });
 
+      // Em CHANNEL_ERROR / TIMED_OUT o próprio Supabase tenta entrar de novo
+      // sozinho e chama este callback com SUBSCRIBED quando conseguir.
       ch.subscribe(async (s, err) => {
         if (disposed || channelRef.current !== ch) return;
         if (s === "SUBSCRIBED") {
-          attempt = 0;
+          clearStuckTimer();
           subscribedRef.current = true;
           graceUntilRef.current = Date.now() + JOIN_GRACE_MS;
-          await ch.track({ role, tab: tabIdRef.current, at: Date.now() });
           setReady(true);
           setStatus("online");
+          try {
+            await ch.track({ role, tab: tabIdRef.current, at: Date.now() });
+          } catch (e) {
+            console.warn("[Sala] falha ao registrar presença", e);
+          }
           // Envia pedidos de sincronização que estavam esperando a conexão.
           pendingRequestsRef.current.forEach((payload, type) => rawSend(type, payload));
-        } else if (s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED") {
+        } else if (s === "CHANNEL_ERROR" || s === "TIMED_OUT") {
           if (err) console.warn(`[Sala] conexão ${s}`, err);
           subscribedRef.current = false;
           setReady(false);
+          setStatus("reconnecting");
+          armStuckTimer();
+        } else if (s === "CLOSED") {
+          // Canal fechado sem a gente pedir: abre outro.
+          subscribedRef.current = false;
+          setReady(false);
           setPeers(0);
-          scheduleReconnect();
+          setStatus("reconnecting");
+          setTimeout(() => {
+            if (!disposed && channelRef.current === ch) connect();
+          }, 1000);
         }
       });
     }
@@ -173,27 +204,23 @@ export function useRoom(code: string | null, role: Role) {
     const wakeUp = () => {
       if (disposed) return;
       if (document.visibilityState === "visible" && !subscribedRef.current) {
-        if (retryTimer) {
-          clearTimeout(retryTimer);
-          retryTimer = null;
-        }
-        attempt = 0;
-        void connect();
+        clearStuckTimer();
+        connect();
       }
     };
 
     setStatus("connecting");
-    void connect();
+    connect();
     window.addEventListener("online", wakeUp);
     document.addEventListener("visibilitychange", wakeUp);
 
     return () => {
       disposed = true;
-      if (retryTimer) clearTimeout(retryTimer);
+      clearStuckTimer();
       if (rebroadcastTimer) clearTimeout(rebroadcastTimer);
       window.removeEventListener("online", wakeUp);
       document.removeEventListener("visibilitychange", wakeUp);
-      void teardown();
+      dropAll();
       setReady(false);
       setPeers(0);
     };
